@@ -65,3 +65,27 @@ class OrganizationViewSet(viewsets.ModelViewSet):
                 serializer.save(organization=org)
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['get', 'post'], permission_classes=[IsAuthenticated, IsOrganizationMember])
+    def projects(self, request, pk=None):
+        from projects.models import Project
+        from projects.serializers import ProjectSerializer
+        
+        org = self.get_object()
+        
+        if request.method == 'GET':
+            projects = org.projects.all()
+            # For strictness, could filter further based on membership, 
+            # but org members usually see all project names.
+            serializer = ProjectSerializer(projects, many=True)
+            return Response(serializer.data)
+            
+        elif request.method == 'POST':
+            if not IsOrganizationAdminOrOwner().has_object_permission(request, self, org):
+                return Response({'detail': 'You do not have permission to create projects.'}, status=status.HTTP_403_FORBIDDEN)
+            
+            serializer = ProjectSerializer(data=request.data)
+            if serializer.is_valid():
+                serializer.save(organization=org)
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
