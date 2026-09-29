@@ -13,8 +13,11 @@ env = environ.Env(
 # Read .env file
 environ.Env.read_env(BASE_DIR / '.env')
 
-# Add apps directory to sys.path so Django can find apps inside it
-sys.path.insert(0, str(BASE_DIR / 'apps'))
+# Custom User Model
+AUTH_USER_MODEL = 'users.User'
+
+# CORS
+CORS_ALLOW_ALL_ORIGINS = True  # Configure this properly for production
 
 
 # Quick-start development settings - unsuitable for production
@@ -38,13 +41,17 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'accounts.apps.AccountsConfig',
-    'organizations.apps.OrganizationsConfig',
+    'rest_framework', 
+    'corsheaders',
+    'organizations', 
+    'users', 
+    'teams',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -115,8 +122,16 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
+MEDIA_URL = 'media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ),
+}
