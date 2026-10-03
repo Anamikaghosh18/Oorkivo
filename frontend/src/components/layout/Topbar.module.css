@@ -1,0 +1,197 @@
+.topbar {
+  height: var(--topbar-height);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-5);
+  position: fixed;
+  top: 0;
+  left: var(--sidebar-width);
+  right: 0;
+  z-index: 90;
+  transition: left var(--transition-base);
+  box-shadow: var(--shadow-xs);
+}
+
+/* Collapsed state handled by AppShell CSS var */
+
+/* ── Org Switcher ───────────────────────────────────────────── */
+.orgSwitcher {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 5px var(--space-2);
+  border-radius: var(--radius-base);
+  transition: background var(--transition-fast);
+}
+.orgSwitcher:hover { background: var(--color-bg); }
+
+.orgIcon {
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-xs);
+  background: var(--color-sage-light);
+  color: var(--color-sage-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.orgInfo { display: flex; flex-direction: column; align-items: flex-start; }
+
+.orgName {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.orgChevron {
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
+}
+
+/* ── Right section ──────────────────────────────────────────── */
+.right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/* ── Search ─────────────────────────────────────────────────── */
+.searchWrap {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-base);
+  padding: 0 var(--space-3);
+  height: 32px;
+  transition: border-color var(--transition-fast), background var(--transition-fast), box-shadow var(--transition-fast);
+  width: 220px;
+}
+
+.searchWrap.searchFocused {
+  border-color: var(--color-sage);
+  background: var(--color-surface);
+  box-shadow: 0 0 0 3px rgba(94,114,96,0.1);
+  width: 280px;
+  transition: width var(--transition-slow), border-color var(--transition-fast), background var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.searchIcon { color: var(--color-text-tertiary); flex-shrink: 0; }
+
+.searchInput {
+  background: none;
+  border: none;
+  outline: none;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  flex: 1;
+  min-width: 0;
+}
+.searchInput::placeholder { color: var(--color-text-tertiary); }
+
+.searchKbd {
+  font-size: 10px;
+  color: var(--color-text-tertiary);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+/* ── Divider ────────────────────────────────────────────────── */
+.divider {
+  width: 1px;
+  height: 18px;
+  background: var(--color-border);
+  margin: 0 var(--space-2);
+}
+
+/* ── Icon buttons ───────────────────────────────────────────── */
+.iconBtn {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-base);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-secondary);
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+.iconBtn:hover {
+  background: var(--color-bg);
+  color: var(--color-text-primary);
+}
+
+/* Notification badge */
+.notifWrap { position: relative; }
+
+.notifBadge {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 7px;
+  height: 7px;
+  background: var(--color-sage);
+  border: 2px solid var(--color-surface);
+  border-radius: 50%;
+}
+
+/* ── User button ────────────────────────────────────────────── */
+.userBtn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 4px var(--space-2) 4px var(--space-1);
+  border-radius: var(--radius-base);
+  border: 1px solid transparent;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+  margin-left: var(--space-1);
+}
+.userBtn:hover {
+  background: var(--color-bg);
+  border-color: var(--color-border);
+}
+
+.userAvatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  flex-shrink: 0;
+  letter-spacing: 0.02em;
+}
+
+.userInfo { display: flex; flex-direction: column; }
+
+.userName {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+}
+
+.userChevron {
+  color: var(--color-text-tertiary);
+  margin-left: 2px;
+}
+
+/* Collapsed sidebar adjustment */
+.topbar[data-collapsed="true"] { left: var(--sidebar-collapsed); }

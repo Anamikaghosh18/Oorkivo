@@ -1,0 +1,194 @@
+.section {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+/* Section header */
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.heading {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.count {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
+/* List */
+.list {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Row layout */
+.row {
+  display: grid;
+  grid-template-columns: 1fr 110px 90px;
+  align-items: center;
+  padding: var(--space-3) var(--space-5);
+  border-bottom: 1px solid var(--color-border-subtle);
+  transition: background var(--transition-fast);
+  gap: var(--space-4);
+}
+
+.row:last-child { border-bottom: none; }
+
+.row:not(.headerRow):hover { background: var(--color-bg); }
+
+/* Header row */
+.headerRow {
+  padding-top: var(--space-2);
+  padding-bottom: var(--space-2);
+  background: var(--color-surface-raised);
+}
+
+.colProject,
+.colStatus,
+.colDeadline {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--color-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* Project column */
+.colProject {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* Monogram */
+.monogram {
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.9);
+  flex-shrink: 0;
+  letter-spacing: 0.02em;
+}
+
+.projectInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.projectName {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.teamName {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
+/* Status pill */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.active    { background: var(--color-success-bg); color: var(--color-success); }
+.planning  { background: var(--color-border-subtle); color: var(--color-text-secondary); }
+.onHold    { background: var(--color-warning-bg); color: var(--color-warning); }
+.completed { background: var(--color-sage-light); color: var(--color-sage-dark); }
+
+/* Deadline */
+.deadline {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.overdue {
+  font-size: var(--font-size-sm);
+  color: var(--color-danger);
+  font-weight: 500;
+}
+
+/* Empty State */
+.empty {
+  padding: var(--space-12) var(--space-8);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  text-align: center;
+}
+
+.emptyIllustration { opacity: 0.85; margin-bottom: var(--space-1); }
+
+.emptyTitle {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.emptyText {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+}
+
+/* Skeletons */
+.skeletonMonogram {
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+  background: linear-gradient(90deg, var(--color-border) 25%, var(--color-surface-raised) 50%, var(--color-border) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+.skeletonLine {
+  background: linear-gradient(90deg, var(--color-border) 25%, var(--color-surface-raised) 50%, var(--color-border) 75%);
+  background-size: 200% 100%;
+  border-radius: var(--radius-sm);
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  from { background-position: 200% 0; }
+  to   { background-position: -200% 0; }
+}
+
+@media (max-width: 600px) {
+  .row { grid-template-columns: 1fr 90px; }
+  .colDeadline { display: none; }
+}

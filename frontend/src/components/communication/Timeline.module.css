@@ -1,0 +1,269 @@
+.timeline {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Header */
+.header {
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--color-border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.title {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+/* Feed */
+.feed {
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-height: 120px;
+  max-height: 480px;
+  overflow-y: auto;
+}
+
+/* Empty */
+.emptyFeed {
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-sm);
+  text-align: center;
+  padding: var(--space-8) 0;
+}
+
+/* ── Avatar ──────────────────────────────────────────────────── */
+.avatar {
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  flex-shrink: 0;
+  letter-spacing: 0.01em;
+}
+
+.avatar-xs { width: 20px; height: 20px; font-size: 9px; }
+.avatar-sm { width: 28px; height: 28px; font-size: 10px; }
+.avatar-md { width: 34px; height: 34px; font-size: 13px; }
+
+/* ── Activity Entry ──────────────────────────────────────────── */
+.activityEntry {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.activityLine {
+  width: 28px;
+  display: flex;
+  justify-content: center;
+  padding-top: 5px;
+  flex-shrink: 0;
+}
+
+.activityDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-border);
+  border: 1.5px solid var(--color-sage-mid);
+}
+
+.activityBody {
+  flex: 1;
+  padding-top: 2px;
+}
+
+.activityActor {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.activityText {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+/* ── Comment Entry ───────────────────────────────────────────── */
+.commentEntry {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+
+.commentBody {
+  flex: 1;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+}
+
+.commentHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.commentAuthor {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.entryTime {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
+.commentContent {
+  font-size: var(--font-size-sm);
+  line-height: var(--leading-loose);
+  color: var(--color-text-primary);
+  white-space: pre-wrap;
+}
+
+/* Comment action menu */
+.menuWrap {
+  margin-left: auto;
+  position: relative;
+}
+
+.menuBtn {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-tertiary);
+  transition: background var(--transition-fast), color var(--transition-fast);
+  opacity: 0;
+}
+
+.commentBody:hover .menuBtn { opacity: 1; }
+
+.menuBtn:hover {
+  background: var(--color-border-subtle);
+  color: var(--color-text-primary);
+}
+
+.menuDropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-base);
+  box-shadow: var(--shadow-md);
+  padding: 4px;
+  min-width: 130px;
+  z-index: 20;
+  animation: fadeIn 120ms ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  color: var(--color-text-primary);
+  transition: background var(--transition-fast);
+}
+
+.menuItem:hover { background: var(--color-bg); }
+
+.menuDanger { color: var(--color-danger); }
+.menuDanger:hover { background: var(--color-danger-bg); }
+
+/* ── Comment Input ───────────────────────────────────────────── */
+.inputForm {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--color-border-subtle);
+  background: var(--color-bg);
+  align-items: flex-start;
+}
+
+.inputWrap {
+  flex: 1;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-base);
+  overflow: hidden;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.inputWrap.inputFocused {
+  border-color: var(--color-sage);
+  box-shadow: 0 0 0 3px rgba(94,114,96,0.1);
+}
+
+.textarea {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  line-height: var(--leading-normal);
+  color: var(--color-text-primary);
+  resize: none;
+  outline: none;
+  transition: height var(--transition-base);
+}
+
+.textarea::placeholder { color: var(--color-text-tertiary); }
+
+.inputFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-4);
+  border-top: 1px solid var(--color-border-subtle);
+  background: var(--color-surface-raised);
+}
+
+.inputHint {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
+.sendBtn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 5px var(--space-3);
+  background: var(--color-sage);
+  color: #fff;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  transition: background var(--transition-fast), opacity var(--transition-fast);
+  border: 1px solid var(--color-sage-dark);
+}
+
+.sendBtn:hover:not(:disabled) { background: var(--color-sage-hover); }
+.sendBtn:disabled { opacity: 0.45; cursor: not-allowed; }
