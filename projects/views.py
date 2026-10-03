@@ -2,15 +2,18 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.exceptions import PermissionDenied
 from django.db import models
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from .models import Project, ProjectMembership, ProjectMilestone, Sprint
 from .serializers import ProjectMilestoneSerializer, ProjectSerializer, ProjectMembershipSerializer, SprintSerializer
-from organizations.models import OrganizationMembership
+from organizations.models import Organization, OrganizationMembership
 from teams.models import TeamMembership
-from communication.models import Activity
+from organizations.context import active_organization_ids, current_organization_id
+from communication.models import Activity, Notification
 from communication.serializers import ActivitySerializer
+from communication.services import notify_project_members
 
 class ProjectViewSet(viewsets.ModelViewSet):
     serializer_class = ProjectSerializer
@@ -30,18 +33,26 @@ class ProjectViewSet(viewsets.ModelViewSet):
             is_active=True
         ).values_list('organization_id', flat=True)
 
-        return Project.objects.filter(
+        queryset = Project.objects.filter(
+            organization_id__in=active_organization_ids(user)
+        ).filter(
             models.Q(organization_id__in=admin_org_ids) |
             models.Q(memberships__user=user) |
             models.Q(team__memberships__user=user)
         ).distinct()
+        organization_id = current_organization_id(self.request)
+        if organization_id is not None:
+            queryset = queryset.filter(organization_id=organization_id)
+        return queryset
 
     def check_admin_permission(self, project):
+        organization = getattr(project, 'organization', project)
         return OrganizationMembership.objects.filter(
             user=self.request.user,
-            organization=project.organization,
+            organization=organization,
             access_level__in=[OrganizationMembership.AccessLevel.OWNER, OrganizationMembership.AccessLevel.ADMIN],
-            is_active=True
+            is_active=True,
+            status=OrganizationMembership.Status.ACTIVE,
         ).exists()
 
     def check_project_manager_permission(self, project):
@@ -54,11 +65,44 @@ class ProjectViewSet(viewsets.ModelViewSet):
     def has_management_permission(self, project):
         return self.check_admin_permission(project) or self.check_project_manager_permission(project)
 
+    def perform_create(self, serializer):
+        organization_id = current_organization_id(self.request) or self.request.data.get('organization')
+        organization = Organization.objects.filter(
+            pk=organization_id,
+            id__in=active_organization_ids(self.request.user),
+        ).first()
+        if organization is None:
+            raise PermissionDenied('Choose an organization you actively belong to.')
+        selected_organization_id = current_organization_id(self.request)
+        if selected_organization_id is not None and organization.id != selected_organization_id:
+            raise PermissionDenied('Projects can only be created in the current organization.')
+        if not self.check_admin_permission(organization):
+            raise PermissionDenied('Only organization owners or admins can create projects.')
+        serializer.save(organization=organization)
+
     def update(self, request, *args, **kwargs):
         project = self.get_object()
         if not self.has_management_permission(project):
             return Response({'detail': 'Not permitted.'}, status=status.HTTP_403_FORBIDDEN)
         return super().update(request, *args, **kwargs)
+
+    def perform_update(self, serializer):
+        project = serializer.instance
+        previous = {
+            'name': project.name,
+            'description': project.description,
+            'status': project.status,
+            'target_end_date': project.target_end_date,
+        }
+        updated = serializer.save()
+        if any(previous[key] != getattr(updated, key) for key in previous):
+            notify_project_members(
+                project=updated,
+                actor=self.request.user,
+                kind=Notification.NotificationTypes.PROJECT_UPDATED,
+                title='Project updated',
+                message=f'{updated.name} was updated.',
+            )
 
     def destroy(self, request, *args, **kwargs):
         project = self.get_object()
@@ -72,14 +116,18 @@ class ProjectViewSet(viewsets.ModelViewSet):
         
         if request.method == 'GET':
             members = ProjectMembership.objects.filter(project=project)
-            serializer = ProjectMembershipSerializer(members, many=True)
+            serializer = ProjectMembershipSerializer(
+                members, many=True, context=self.get_serializer_context()
+            )
             return Response(serializer.data)
             
         elif request.method == 'POST':
             if not self.has_management_permission(project):
                 return Response({'detail': 'Not permitted.'}, status=status.HTTP_403_FORBIDDEN)
                 
-            serializer = ProjectMembershipSerializer(data=request.data)
+            serializer = ProjectMembershipSerializer(
+                data=request.data, context=self.get_serializer_context()
+            )
             if serializer.is_valid():
                 try:
                     membership = serializer.save(project=project)
@@ -106,6 +154,13 @@ class ProjectViewSet(viewsets.ModelViewSet):
         serializer = ProjectMilestoneSerializer(data=request.data, context={'project': project})
         if serializer.is_valid():
             milestone = serializer.save(project=project)
+            notify_project_members(
+                project=project,
+                actor=request.user,
+                kind=Notification.NotificationTypes.MILESTONE_UPDATED,
+                title='Milestone added',
+                message=f'{milestone.title} was added to {project.name}.',
+            )
             return Response(ProjectMilestoneSerializer(milestone).data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -124,7 +179,20 @@ class ProjectViewSet(viewsets.ModelViewSet):
             milestone, data=request.data, partial=True, context={'project': project}
         )
         if serializer.is_valid():
+            previous = {
+                'title': milestone.title,
+                'description': milestone.description,
+                'target_date': milestone.target_date,
+            }
             milestone = serializer.save()
+            if any(previous[key] != getattr(milestone, key) for key in previous):
+                notify_project_members(
+                    project=project,
+                    actor=request.user,
+                    kind=Notification.NotificationTypes.MILESTONE_UPDATED,
+                    title='Milestone updated',
+                    message=f'{milestone.title} was updated in {project.name}.',
+                )
             return Response(ProjectMilestoneSerializer(milestone).data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -139,7 +207,9 @@ class ProjectViewSet(viewsets.ModelViewSet):
     def activity(self, request, pk=None):
         project = self.get_object()
         activities = Activity.objects.filter(project=project).select_related('actor', 'task')
-        return Response(ActivitySerializer(activities[:100], many=True).data)
+        return Response(ActivitySerializer(
+            activities[:100], many=True, context={'request': request}
+        ).data)
 
     @action(detail=True, methods=['get', 'post'])
     def sprints(self, request, pk=None):
@@ -220,4 +290,13 @@ class ProjectViewSet(viewsets.ModelViewSet):
             project=project, actor=request.user, action=action_type,
             details={'sprint_id': sprint.id, 'sprint_name': sprint.name},
         )
+        if new_status == Sprint.Status.ACTIVE:
+            notify_project_members(
+                project=project,
+                sprint=sprint,
+                actor=request.user,
+                kind=Notification.NotificationTypes.SPRINT_STARTED,
+                title='Sprint started',
+                message=f'{sprint.name} has started.',
+            )
         return Response(SprintSerializer(sprint).data)

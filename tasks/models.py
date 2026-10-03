@@ -122,7 +122,8 @@ class Task(models.Model):
             is_org_member = OrganizationMembership.objects.filter(
                 user=self.assigned_to,
                 organization=self.project.organization,
-                is_active=True
+                is_active=True,
+                status=OrganizationMembership.Status.ACTIVE,
             ).exists()
             if not is_org_member:
                 raise ValidationError({

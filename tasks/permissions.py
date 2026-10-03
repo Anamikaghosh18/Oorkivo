@@ -1,6 +1,7 @@
 from rest_framework import permissions
 from organizations.models import OrganizationMembership
 from projects.models import ProjectMembership
+from organizations.context import current_organization_id
 
 class HasTaskAccess(permissions.BasePermission):
     """
@@ -14,10 +15,18 @@ class HasTaskAccess(permissions.BasePermission):
         
         if not user.is_authenticated:
             return False
+        selected_organization_id = current_organization_id(request)
+        if selected_organization_id is not None and project.organization_id != selected_organization_id:
+            return False
 
         # 1. Check organization membership and get role
         try:
-            org_member = OrganizationMembership.objects.get(user=user, organization=org, is_active=True)
+            org_member = OrganizationMembership.objects.get(
+                user=user,
+                organization=org,
+                is_active=True,
+                status=OrganizationMembership.Status.ACTIVE,
+            )
         except OrganizationMembership.DoesNotExist:
             return False # Completely blocked if not in org
             

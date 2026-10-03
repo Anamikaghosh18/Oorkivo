@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom';
+import { Navigate, NavLink } from 'react-router-dom';
 import { ArrowUpRight, CalendarDays, CheckCircle2, FolderKanban } from 'lucide-react';
 import AppShell from '../components/layout/AppShell';
 import { useDashboard } from '../hooks/useDashboard';
@@ -88,6 +88,7 @@ export default function Dashboard() {
     .slice(0, 4);
   const notifications = [...activity].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 5);
   const taskDataReady = !loading && !taskDataError;
+  if (!loading && !org) return <Navigate to="/onboarding" replace />;
 
   return (
     <AppShell org={org} user={user}>

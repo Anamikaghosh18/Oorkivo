@@ -1,12 +1,14 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import AuthLayout, { GoogleIcon } from '../components/auth/AuthLayout';
+import { authApi } from '../services/api';
 import styles from './AuthForms.module.css'; // Shared form styles
 
 export default function Signup() {
   const { register } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   
   const [firstName, setFirstName] = useState('');
   const [lastName,  setLastName]  = useState('');
@@ -24,7 +26,14 @@ export default function Signup() {
       // The backend requires a 'username' field. We generate it from the email prefix.
       const username = email.split('@')[0] + Math.floor(Math.random() * 10000);
       await register({ username, email, password, first_name: firstName, last_name: lastName });
-      navigate('/dashboard'); // Auto-login handles the redirect, but just in case
+      const invitationToken = searchParams.get('invite');
+      if (invitationToken) {
+        const response = await authApi.acceptInvitation(invitationToken);
+        localStorage.setItem('current_organization_id', String(response.data.organization_id));
+        navigate('/dashboard');
+      } else {
+        navigate('/onboarding');
+      }
     } catch (err) {
       const data = err.response?.data;
       if (data && typeof data === 'object' && !data.detail) {
@@ -45,10 +54,12 @@ export default function Signup() {
   };
 
   return (
-    <AuthLayout 
+    <AuthLayout
+      variant="auth"
       title="Create an account" 
-      subtitle="Join your team and start managing your projects."
+      subtitle="Get your team’s work into one clear view."
     >
+      <div className={styles.authCompact}>
       {error && <div className={styles.error} role="alert">{error}</div>}
 
       <form className={styles.form} onSubmit={handleSubmit}>
@@ -118,8 +129,9 @@ export default function Signup() {
       </button>
 
       <p className={styles.switchPrompt}>
-        Already have an account? <Link to="/login" className={styles.switchLink}>Sign in</Link>
+        Already have an account? <Link to={`/login${searchParams.get('invite') ? `?invite=${encodeURIComponent(searchParams.get('invite'))}` : ''}`} className={styles.switchLink}>Sign in</Link>
       </p>
+      </div>
     </AuthLayout>
   );
 }

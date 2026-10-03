@@ -1,29 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Send, Pencil, Trash2, MoreHorizontal, Check, X } from 'lucide-react';
+import Avatar from '../Avatar';
 import styles from './Timeline.module.css';
-
-/* ── Shared Avatar ─────────────────────────────────────────── */
-const AVATAR_COLORS = [
-  ['#D4E3D3', '#4A5B4C'], ['#D3DCE3', '#3D4F5E'],
-  ['#E3D3D8', '#5E3D47'], ['#E0D9D3', '#5E4E3D'],
-  ['#D3E3DC', '#3D5E52'],
-];
-
-function Avatar({ user, size = 'sm' }) {
-  const name = user?.first_name || user?.username || '?';
-  const initials = name.slice(0, 1).toUpperCase();
-  const idx = name.charCodeAt(0) % AVATAR_COLORS.length;
-  const [bg, fg] = AVATAR_COLORS[idx];
-  return (
-    <div
-      className={`${styles.avatar} ${styles[`avatar-${size}`]}`}
-      style={{ background: bg, color: fg }}
-      title={name}
-    >
-      {initials}
-    </div>
-  );
-}
 
 function formatEntryTime(value) {
   if (!value) return '';
@@ -75,7 +53,7 @@ function CommentEntry({ comment, currentUserId, onDelete, onUpdate }) {
 
   return (
     <div className={styles.commentEntry}>
-      <Avatar user={comment.author} />
+      <Avatar user={comment.author} size={28} className={styles['avatar-sm']} />
       <div className={styles.commentBody}>
         <div className={styles.commentHeader}>
           <span className={styles.commentAuthor}>
@@ -167,7 +145,7 @@ function CommentInput({ onSubmit, currentUser }) {
 
   return (
     <form className={styles.inputForm} onSubmit={handleSubmit}>
-      <Avatar user={currentUser || { first_name: 'Me' }} />
+      <Avatar user={currentUser || { first_name: 'Me' }} size={28} className={styles['avatar-sm']} />
       <div className={`${styles.inputWrap} ${focused ? styles.inputFocused : ''}`}>
         <textarea
           ref={textareaRef}

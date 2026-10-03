@@ -6,6 +6,7 @@
  */
 import { useState, useEffect, useCallback } from 'react';
 import { authApi, organizationsApi, projectsApi } from '../services/api';
+import { selectCurrentOrganization } from '../utils/organizationContext';
 
 function getRows(data) {
   const rows = data?.results ?? data;
@@ -26,10 +27,9 @@ export function useProjects() {
     setError(null);
     setTeamsError('');
     try {
-      const [meRes, orgsRes] = await Promise.all([authApi.me(), organizationsApi.list()]);
+      const meRes = await authApi.me();
       setUser(meRes.data);
-      const orgs = orgsRes.data?.results ?? orgsRes.data;
-      const firstOrg = Array.isArray(orgs) && orgs.length > 0 ? orgs[0] : null;
+      const firstOrg = selectCurrentOrganization(meRes.data);
       setOrg(firstOrg);
 
       if (firstOrg) {

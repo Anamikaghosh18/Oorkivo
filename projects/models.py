@@ -55,7 +55,12 @@ class ProjectMembership(models.Model):
         ]
 
     def clean(self):
-        if not OrganizationMembership.objects.filter(user=self.user, organization=self.project.organization, is_active=True).exists():
+        if not OrganizationMembership.objects.filter(
+            user=self.user,
+            organization=self.project.organization,
+            is_active=True,
+            status=OrganizationMembership.Status.ACTIVE,
+        ).exists():
             raise ValidationError("User must be an active member of the organization to join this project.")
 
     def save(self, *args, **kwargs):

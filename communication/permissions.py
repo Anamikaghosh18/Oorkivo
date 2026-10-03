@@ -26,7 +26,8 @@ class IsCommentAuthorOrModerator(permissions.BasePermission):
                 user=request.user,
                 organization=project.organization,
                 access_level__in=[OrganizationMembership.AccessLevel.OWNER, OrganizationMembership.AccessLevel.ADMIN],
-                is_active=True
+                is_active=True,
+                status=OrganizationMembership.Status.ACTIVE,
             ).exists()
 
         return False

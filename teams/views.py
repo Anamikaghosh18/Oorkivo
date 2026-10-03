@@ -5,6 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from .models import Team, TeamMembership
 from .serializers import TeamSerializer, TeamMembershipSerializer
 from organizations.models import OrganizationMembership
+from organizations.context import active_organization_ids, scope_to_current_organization
 
 class TeamViewSet(viewsets.ModelViewSet):
     serializer_class = TeamSerializer
@@ -12,14 +13,18 @@ class TeamViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         # Users can only see teams in organizations they belong to
-        return Team.objects.filter(organization__memberships__user=self.request.user, organization__memberships__is_active=True).distinct()
+        queryset = Team.objects.filter(
+            organization_id__in=active_organization_ids(self.request.user)
+        ).distinct()
+        return scope_to_current_organization(queryset, self.request)
 
     def check_admin_permission(self, team):
         return OrganizationMembership.objects.filter(
             user=self.request.user,
             organization=team.organization,
             access_level__in=[OrganizationMembership.AccessLevel.OWNER, OrganizationMembership.AccessLevel.ADMIN],
-            is_active=True
+            is_active=True,
+            status=OrganizationMembership.Status.ACTIVE,
         ).exists()
 
     def check_team_lead_permission(self, team):

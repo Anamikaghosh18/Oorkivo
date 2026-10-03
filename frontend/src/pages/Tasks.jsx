@@ -18,9 +18,10 @@ import {
   UserRound,
 } from 'lucide-react';
 import AppShell from '../components/layout/AppShell';
+import Avatar from '../components/Avatar';
 import DropdownSelect from '../components/DropdownSelect';
 import { useDashboard } from '../hooks/useDashboard';
-import { projectsApi, tasksApi } from '../services/api';
+import { authApi, organizationsApi, projectsApi, tasksApi } from '../services/api';
 import styles from './Tasks.module.css';
 
 const STATUS_META = {
@@ -146,12 +147,14 @@ function EmptyState({ title, detail }) {
 }
 
 export default function Tasks() {
-  const { user, org } = useDashboard();
+  const { user, org, loading: workspaceLoading } = useDashboard();
   const navigate = useNavigate();
   const [tasks, setTasks] = useState([]);
   const [projects, setProjects] = useState([]);
   const [sprints, setSprints] = useState([]);
   const [projectMembers, setProjectMembers] = useState({});
+  const [organizationMembers, setOrganizationMembers] = useState([]);
+  const [assigneeLoadError, setAssigneeLoadError] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [actionError, setActionError] = useState('');
@@ -189,8 +192,46 @@ export default function Tasks() {
     title: '',
     description: '',
     priority: 'MEDIUM',
+    status: 'TODO',
+    assigned_to: '',
     due_date: '',
   });
+
+  useEffect(() => {
+    if (workspaceLoading) return undefined;
+    if (!org) {
+      setLoading(false);
+      return undefined;
+    }
+    let active = true;
+    authApi.preferences().then(({ data }) => {
+      if (active && ['LIST', 'BOARD'].includes(data.default_task_view)) {
+        setLayoutView(data.default_task_view);
+      }
+    }).catch((preferenceError) => {
+      if (active) setActionError(getErrorMessage(preferenceError, 'Could not load task preferences.'));
+    });
+    return () => { active = false; };
+  }, [workspaceLoading, org?.id]);
+
+  useEffect(() => {
+    if (!org?.id || !['OWNER', 'ADMIN'].includes(org.access_level)) {
+      setOrganizationMembers([]);
+      setAssigneeLoadError('');
+      return undefined;
+    }
+    let active = true;
+    organizationsApi.members(org.id).then(({ data }) => {
+      if (!active) return;
+      setOrganizationMembers(getRows(data).filter((membership) =>
+        membership.status === 'ACTIVE' && membership.is_active !== false));
+      setAssigneeLoadError('');
+    }).catch((membersError) => {
+      if (!active) return;
+      setAssigneeLoadError(getErrorMessage(membersError, 'Organization members could not be loaded for assignment.'));
+    });
+    return () => { active = false; };
+  }, [org?.id, org?.access_level]);
 
   useEffect(() => {
     let active = true;
@@ -269,6 +310,17 @@ export default function Tasks() {
   const canEditTask = (task) => canManageTask(task)
     || String(task.assigned_to?.id) === String(user?.id);
   const manageableProjects = projects.filter((project) => canManageProject(project.id));
+  const canCreateTask = manageableProjects.length > 0
+    || ['OWNER', 'ADMIN'].includes(org?.access_level ?? org?.membership?.role);
+  const createTaskAssignees = useMemo(() => {
+    const projectUsers = (projectMembers[newTask.projectId] ?? []).map((membership) => membership.user).filter(Boolean);
+    const organizationUsers = ['OWNER', 'ADMIN'].includes(org?.access_level)
+      ? organizationMembers.map((membership) => membership.user).filter(Boolean)
+      : [];
+    return Array.from(new Map(
+      [...projectUsers, ...organizationUsers].map((member) => [String(member.id), member]),
+    ).values()).sort((a, b) => fullName(a).localeCompare(fullName(b)));
+  }, [projectMembers, newTask.projectId, organizationMembers, org?.access_level]);
 
   useEffect(() => {
     if (!newTask.projectId && manageableProjects.length) {
@@ -447,13 +499,19 @@ export default function Tasks() {
       const response = await tasksApi.create(project.id, {
         title: newTask.title.trim(),
         description: newTask.description.trim(),
-        status: 'TODO',
+        status: newTask.status,
         priority: newTask.priority,
+        assigned_to: newTask.assigned_to ? Number(newTask.assigned_to) : null,
         due_date: newTask.due_date || null,
       });
-      setTasks((current) => [{ ...response.data, project: response.data.project ?? { id: project.id, name: project.name } }, ...current]);
+      const assignedMember = createTaskAssignees.find((member) => String(member.id) === String(newTask.assigned_to));
+      setTasks((current) => [{
+        ...response.data,
+        assigned_to: assignedMember ?? response.data.assigned_to ?? null,
+        project: response.data.project ?? { id: project.id, name: project.name },
+      }, ...current]);
       setCreateOpen(false);
-      setNewTask((current) => ({ ...current, title: '', description: '', priority: 'MEDIUM', due_date: '' }));
+      setNewTask((current) => ({ ...current, title: '', description: '', priority: 'MEDIUM', status: 'TODO', assigned_to: '', due_date: '' }));
     } catch (createErrorValue) {
       setCreateError(getErrorMessage(createErrorValue, 'Could not create this task. Check your project access and try again.'));
     } finally {
@@ -708,7 +766,7 @@ export default function Tasks() {
                   <div className={styles.boardTaskMeta}>
                     <PriorityLabel value={task.priority} />
                     <span className={styles.boardAssignee}>
-                      <span className={styles.avatar} aria-hidden="true">{task.assigned_to ? initials(task.assigned_to) : <UserRound size={13} />}</span>
+                      {task.assigned_to ? <Avatar user={task.assigned_to} size={24} /> : <span className={styles.avatar} aria-hidden="true"><UserRound size={13} /></span>}
                       <span>{fullName(task.assigned_to)}</span>
                     </span>
                   </div>
@@ -906,7 +964,7 @@ export default function Tasks() {
       <div className={styles.workspace}>
         <header className={styles.pageHeader}>
           <div><span className={styles.eyebrow}>Your workspace</span><h1>Tasks</h1></div>
-          {manageableProjects.length > 0 && <button type="button" className={styles.newTaskButton} onClick={() => { setCreateError(''); setCreateOpen(true); }}><Plus size={16} /> New task</button>}
+          {canCreateTask && <button type="button" className={styles.newTaskButton} onClick={() => { setCreateError(''); setCreateOpen(true); }}><Plus size={16} /> New task</button>}
         </header>
 
         <nav className={styles.workspaceTabs} aria-label="Task workspaces" role="tablist">
@@ -926,20 +984,34 @@ export default function Tasks() {
         {workspaceView === 'SPRINTS' && renderSprintWorkspace()}
 
         {createOpen && (
-          <div className={styles.modalBackdrop} role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setCreateOpen(false); }}>
-            <section className={styles.createDialog} role="dialog" aria-modal="true" aria-labelledby="create-task-title">
-              <div className={styles.dialogHeader}><div><span className={styles.sectionEyebrow}>Add work</span><h2 id="create-task-title">New task</h2></div><button type="button" aria-label="Close" onClick={() => setCreateOpen(false)}>×</button></div>
+          <div className={styles.drawerBackdrop} role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !createSaving) setCreateOpen(false); }}>
+            <section className={styles.taskDrawer} role="dialog" aria-modal="true" aria-labelledby="create-task-title">
+              <div className={styles.dialogHeader}><div><span className={styles.sectionEyebrow}>Add work</span><h2 id="create-task-title">Create task</h2></div><button type="button" aria-label="Close" onClick={() => setCreateOpen(false)} disabled={createSaving}>×</button></div>
+              {!manageableProjects.length ? (
+                <div className={styles.noTaskProject}>
+                  {loading ? <p role="status">Loading projects…</p> : <>
+                    <p>A task needs a project. Create a project or ask to be added as a project manager, then you can create tasks here.</p>
+                    <NavLink to="/projects" className={styles.projectLink} onClick={() => setCreateOpen(false)}>Go to projects <ChevronRight size={14} /></NavLink>
+                  </>}
+                </div>
+              ) : (
               <form onSubmit={handleCreateTask}>
-                <label>Project<select required value={newTask.projectId} onChange={(event) => setNewTask((current) => ({ ...current, projectId: event.target.value }))}>{manageableProjects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}</select></label>
                 <label>Task title<input required maxLength={255} autoFocus value={newTask.title} onChange={(event) => setNewTask((current) => ({ ...current, title: event.target.value }))} /></label>
                 <label>Description<textarea rows={4} value={newTask.description} onChange={(event) => setNewTask((current) => ({ ...current, description: event.target.value }))} /></label>
+                <label>Project<select required value={newTask.projectId} onChange={(event) => setNewTask((current) => ({ ...current, projectId: event.target.value, assigned_to: '' }))}>{manageableProjects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}</select></label>
+                <div className={styles.formRow}>
+                  <label>Assignee<select value={newTask.assigned_to} onChange={(event) => setNewTask((current) => ({ ...current, assigned_to: event.target.value }))}><option value="">Unassigned</option>{createTaskAssignees.map((member) => <option key={member.id} value={member.id}>{fullName(member)}</option>)}</select></label>
+                  <label>Status<select value={newTask.status} onChange={(event) => setNewTask((current) => ({ ...current, status: event.target.value }))}>{['BACKLOG', 'TODO', 'IN_PROGRESS', 'IN_REVIEW', 'COMPLETED', 'BLOCKED'].map((status) => <option key={status} value={status}>{STATUS_META[status].label}</option>)}</select></label>
+                </div>
+                {assigneeLoadError && ['OWNER', 'ADMIN'].includes(org?.access_level) && <p className={styles.inlineError} role="alert">{assigneeLoadError}</p>}
                 <div className={styles.formRow}>
                   <label>Priority<select value={newTask.priority} onChange={(event) => setNewTask((current) => ({ ...current, priority: event.target.value }))}>{Object.entries(PRIORITY_META).map(([value, meta]) => <option key={value} value={value}>{meta.label}</option>)}</select></label>
                   <label>Due date<input type="date" value={newTask.due_date} onChange={(event) => setNewTask((current) => ({ ...current, due_date: event.target.value }))} /></label>
                 </div>
                 {createError && <p className={styles.inlineError} role="alert">{createError}</p>}
-                <div className={styles.dialogActions}><button type="button" className={styles.cancelButton} onClick={() => setCreateOpen(false)}>Cancel</button><button type="submit" className={styles.newTaskButton} disabled={createSaving || !newTask.title.trim()}>{createSaving ? 'Creating…' : 'Create task'}</button></div>
+                <div className={styles.drawerActions}><button type="button" className={styles.cancelButton} onClick={() => setCreateOpen(false)} disabled={createSaving}>Cancel</button><button type="submit" className={styles.newTaskButton} disabled={createSaving || !newTask.title.trim() || !newTask.projectId}>{createSaving ? 'Creating…' : 'Create task'}</button></div>
               </form>
+              )}
             </section>
           </div>
         )}

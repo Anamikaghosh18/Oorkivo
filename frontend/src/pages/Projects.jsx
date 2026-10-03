@@ -143,7 +143,10 @@ export default function Projects() {
   const [createOpen, setCreateOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState('');
-  const [form, setForm] = useState({ name: '', description: '', status: 'PLANNING', team: '', target_end_date: '' });
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
+  const [form, setForm] = useState({ name: '', description: '', status: 'PLANNING', team: '', start_date: '', target_end_date: '' });
 
   const filteredProjects = useMemo(() => {
     const query = search.trim().toLocaleLowerCase();
@@ -161,12 +164,23 @@ export default function Projects() {
       });
   }, [projects, search, statusFilter, teamFilter, sortOrder]);
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Delete this project? This cannot be undone.')) return;
+  const requestDelete = (id) => {
+    setDeleteError('');
+    setDeleteTarget(projects.find((project) => String(project.id) === String(id)) ?? null);
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    setDeleteError('');
     try {
-      await deleteProject(id);
-    } catch {
-      window.alert('Failed to delete project. Please try again.');
+      await deleteProject(deleteTarget.id);
+      setDeleteTarget(null);
+    } catch (deleteErrorResponse) {
+      const detail = deleteErrorResponse.response?.data?.detail;
+      setDeleteError(typeof detail === 'string' ? detail : 'Failed to delete this project. Please try again.');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -178,9 +192,10 @@ export default function Projects() {
       await createProject({
         ...form,
         team: form.team ? Number(form.team) : null,
+        start_date: form.start_date || null,
         target_end_date: form.target_end_date || null,
       });
-      setForm({ name: '', description: '', status: 'PLANNING', team: '', target_end_date: '' });
+      setForm({ name: '', description: '', status: 'PLANNING', team: '', start_date: '', target_end_date: '' });
       setCreateOpen(false);
     } catch (createErrorResponse) {
       const detail = createErrorResponse.response?.data?.detail;
@@ -199,60 +214,29 @@ export default function Projects() {
             <h1 className={styles.pageTitle}>Your projects</h1>
             <p className={styles.pageSubtitle}>Your team’s active work, milestones and progress.</p>
           </div>
-          <button type="button" className={styles.createButton} onClick={() => { setCreateError(''); setCreateOpen((open) => !open); }}>
-            {createOpen ? <X size={15} /> : <Plus size={15} />}
-            {createOpen ? 'Cancel' : 'New project'}
+          <button type="button" className={styles.createButton} onClick={() => { setCreateError(''); setCreateOpen(true); }}>
+            <Plus size={15} /> New project
           </button>
         </header>
 
         {createOpen && (
-          <form className={styles.createForm} onSubmit={handleCreate}>
-            <div className={styles.formHeading}>
-              <strong>Create a project</strong>
-              <span>Set up a workspace for shared delivery.</span>
-            </div>
-            <label className={styles.formField}>
-              <span>Project name</span>
-              <input required maxLength={255} value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} autoFocus />
-            </label>
-            <label className={styles.formField}>
-              <span>Description</span>
-              <input value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} />
-            </label>
-            <div className={styles.formControls}>
-              <div className={styles.formField}>
-                <span>Status</span>
-                <DropdownSelect
-                  variant="field"
-                  ariaLabel="Project status"
-                  value={form.status}
-                  options={Object.entries(STATUS_META).map(([value, meta]) => ({ value, label: meta.label }))}
-                  onChange={(status) => setForm((current) => ({ ...current, status }))}
-                />
-              </div>
-              <div className={styles.formField}>
-                <span>Team</span>
-                <DropdownSelect
-                  variant="field"
-                  ariaLabel="Project team"
-                  value={form.team}
-                  options={[
-                    { value: '', label: 'Cross-functional' },
-                    ...teams.map((team) => ({ value: String(team.id), label: team.name })),
-                  ]}
-                  onChange={(team) => setForm((current) => ({ ...current, team }))}
-                />
-              </div>
-              <label className={styles.formField}>
-                <span>Target date</span>
-                <input type="date" value={form.target_end_date} onChange={(event) => setForm({ ...form, target_end_date: event.target.value })} />
-              </label>
-              <button type="submit" className={styles.createSubmit} disabled={creating || !form.name.trim()}>
-                <Check size={14} /> {creating ? 'Creating…' : 'Create project'}
-              </button>
-            </div>
-            {createError && <p className={styles.formError} role="alert">{createError}</p>}
-          </form>
+          <div className={styles.drawerBackdrop} role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !creating) setCreateOpen(false); }}>
+            <section className={styles.projectDrawer} role="dialog" aria-modal="true" aria-labelledby="create-project-title">
+              <header className={styles.drawerHeader}><div><span className={styles.eyebrow}>Workspace</span><h2 id="create-project-title">Create project</h2><p>Set up a workspace for shared delivery.</p></div><button type="button" aria-label="Close" onClick={() => setCreateOpen(false)} disabled={creating}><X size={18} /></button></header>
+              <form className={styles.drawerForm} onSubmit={handleCreate}>
+                <label className={styles.formField}><span>Project name</span><input required maxLength={255} value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} autoFocus /></label>
+                <label className={styles.formField}><span>Description</span><textarea rows={3} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} /></label>
+                <label className={styles.formField}><span>Team</span><DropdownSelect variant="field" ariaLabel="Project team" value={form.team} options={[{ value: '', label: 'Cross-functional' }, ...teams.map((team) => ({ value: String(team.id), label: team.name }))]} onChange={(team) => setForm((current) => ({ ...current, team }))} /></label>
+                <div className={styles.drawerDateRow}>
+                  <label className={styles.formField}><span>Start date</span><input type="date" value={form.start_date} onChange={(event) => setForm({ ...form, start_date: event.target.value })} /></label>
+                  <label className={styles.formField}><span>End date</span><input type="date" min={form.start_date || undefined} value={form.target_end_date} onChange={(event) => setForm({ ...form, target_end_date: event.target.value })} /></label>
+                </div>
+                <label className={styles.formField}><span>Status</span><DropdownSelect variant="field" ariaLabel="Project status" value={form.status} options={Object.entries(STATUS_META).map(([value, meta]) => ({ value, label: meta.label }))} onChange={(status) => setForm((current) => ({ ...current, status }))} /></label>
+                {createError && <p className={styles.formError} role="alert">{createError}</p>}
+                <div className={styles.drawerActions}><button type="button" className={styles.cancelButton} onClick={() => setCreateOpen(false)} disabled={creating}>Cancel</button><button type="submit" className={styles.createSubmit} disabled={creating || !form.name.trim()}><Check size={14} />{creating ? 'Creating…' : 'Create project'}</button></div>
+              </form>
+            </section>
+          </div>
         )}
 
         {error && <div className={styles.errorBanner} role="alert"><span>{error}</span><button type="button" onClick={reload}>Retry</button></div>}
@@ -312,7 +296,7 @@ export default function Projects() {
             filteredProjects.map((project) => {
               const projectTeamId = teamId(project);
               const teamName = project.team?.name ?? teams.find((team) => String(team.id) === String(projectTeamId))?.name;
-              return <ProjectRow key={project.id} project={project} teamName={teamName} onDelete={handleDelete} />;
+              return <ProjectRow key={project.id} project={project} teamName={teamName} onDelete={requestDelete} />;
             })
           ) : (
             <div className={styles.emptyState}>
@@ -323,6 +307,19 @@ export default function Projects() {
             </div>
           )}
         </section>
+        {deleteTarget && (
+          <div className={styles.confirmBackdrop} role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !deleting) setDeleteTarget(null); }}>
+            <section className={styles.confirmDialog} role="alertdialog" aria-modal="true" aria-labelledby="delete-project-title">
+              <h2 id="delete-project-title">Delete project?</h2>
+              <p>This will delete “{deleteTarget.name}” and cannot be undone.</p>
+              {deleteError && <p className={styles.formError} role="alert">{deleteError}</p>}
+              <div className={styles.confirmActions}>
+                <button type="button" onClick={() => setDeleteTarget(null)} disabled={deleting}>Cancel</button>
+                <button type="button" className={styles.dangerButton} onClick={handleDelete} disabled={deleting}>{deleting ? 'Deleting…' : 'Delete project'}</button>
+              </div>
+            </section>
+          </div>
+        )}
       </div>
     </AppShell>
   );

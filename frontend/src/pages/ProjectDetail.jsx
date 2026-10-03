@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { NavLink, useParams } from 'react-router-dom';
 import { ArrowLeft, CalendarDays, CheckCircle2, Circle, Clock3, FolderKanban, Users, Plus, ChevronDown, Activity as ActivityIcon } from 'lucide-react';
 import AppShell from '../components/layout/AppShell';
+import Avatar from '../components/Avatar';
+import { selectCurrentOrganization } from '../utils/organizationContext';
 import { authApi, organizationsApi, projectsApi, tasksApi } from '../services/api';
 import styles from './ProjectDetail.module.css';
 
@@ -44,10 +46,6 @@ function fullName(user) {
   return [user?.first_name, user?.last_name].filter(Boolean).join(' ').trim() || user?.email || 'Unknown member';
 }
 
-function memberInitials(user) {
-  return fullName(user).split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase();
-}
-
 function ProjectMembers({ members, error }) {
   if (error) return <p className={styles.inlineError}>{error}</p>;
   if (!members.length) return <p className={styles.quietMessage}>No project members are available.</p>;
@@ -55,7 +53,7 @@ function ProjectMembers({ members, error }) {
     <ul className={styles.memberList}>
       {members.map((membership, index) => (
         <li className={styles.member} key={membership.id ?? index}>
-          <span className={`${styles.memberAvatar} ${styles[`avatarTone${index % 4}`]}`}>{memberInitials(membership.user)}</span>
+          <Avatar user={membership.user} size={29} />
           <span className={styles.memberInfo}>
             <strong>{fullName(membership.user)}</strong>
             {membership.user?.email && <small>{membership.user.email}</small>}
@@ -74,7 +72,7 @@ function RecentDiscussion({ comments, error }) {
     <ol className={styles.discussionList}>
       {comments.map(({ comment, task }) => (
         <li className={styles.discussionItem} key={`${task.id}-${comment.id}`}>
-          <span className={styles.discussionAvatar}>{memberInitials(comment.author)}</span>
+          <Avatar user={comment.author} size={29} />
           <div className={styles.discussionContent}>
             <div className={styles.discussionMeta}>
               <strong>{fullName(comment.author)}</strong>
@@ -192,17 +190,14 @@ export default function ProjectDetail() {
     setActivity([]);
     setSprints([]);
     try {
-      const [projectResult, userResult, orgsResult] = await Promise.all([
-        projectsApi.get(id),
-        authApi.me(),
-        organizationsApi.list(),
-      ]);
+      const userResult = await authApi.me();
+      const userOrg = selectCurrentOrganization(userResult.data);
+      const projectResult = await projectsApi.get(id);
       const loadedProject = projectResult.data;
       setProject(loadedProject);
       setUser(userResult.data);
-      const organizations = getRows(orgsResult.data);
       const projectOrgId = loadedProject.organization?.id ?? loadedProject.organization;
-      const currentOrg = organizations.find((item) => String(item.id) === String(projectOrgId)) ?? organizations[0] ?? null;
+      const currentOrg = String(userOrg?.id) === String(projectOrgId) ? userOrg : null;
       setOrg(currentOrg);
 
       const [tasksResult, membersResult, teamsResult] = await Promise.allSettled([
@@ -269,6 +264,18 @@ export default function ProjectDetail() {
       setLoading(false);
     }
   }, [id]);
+
+  useEffect(() => {
+    let active = true;
+    authApi.preferences().then(({ data }) => {
+      if (active && ['OVERVIEW', 'TASKS', 'ACTIVITY'].includes(data.default_project_view)) {
+        setActiveTab(data.default_project_view);
+      }
+    }).catch((preferenceError) => {
+      console.error('Unable to load project view preferences.', preferenceError);
+    });
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => { load(); }, [load]);
 

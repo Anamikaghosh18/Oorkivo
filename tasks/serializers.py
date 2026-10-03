@@ -71,6 +71,7 @@ class TaskSerializer(serializers.ModelSerializer):
                 organization=self.instance.project.organization,
                 access_level__in=[OrganizationMembership.AccessLevel.OWNER, OrganizationMembership.AccessLevel.ADMIN],
                 is_active=True,
+                status=OrganizationMembership.Status.ACTIVE,
             ).exists()
             manager = ProjectMembership.objects.filter(
                 user=request.user, project=self.instance.project,

@@ -1155,21 +1155,27 @@ a.row:hover {
 .projectLink { display: inline-flex; align-items: center; gap: 4px; margin-top: var(--space-4); color: var(--color-sage-dark); font-size: var(--font-size-sm); text-decoration: none; }
 .listRowWithAction { grid-template-columns: minmax(210px, 2fr) minmax(110px, 0.9fr) minmax(90px, 0.7fr) minmax(105px, 0.8fr) auto; }
 
-.modalBackdrop { position: fixed; z-index: 20; inset: 0; display: grid; place-items: center; overflow-y: auto; padding: 20px; background: rgba(35, 37, 33, 0.38); }
-.createDialog { width: min(100%, 500px); padding: 22px; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); box-shadow: var(--shadow-md); }
+.drawerBackdrop { position: fixed; z-index: 150; inset: 0; display: flex; justify-content: flex-end; background: rgb(41 44 39 / 30%); animation: drawerFadeIn .18s ease-out; }
+.taskDrawer { display: flex; width: min(480px, 100%); height: 100%; flex-direction: column; overflow-y: auto; padding: 24px; border-left: 1px solid var(--color-border); background: var(--color-surface); box-shadow: -16px 0 50px rgb(0 0 0 / 12%); animation: drawerSlideIn .22s cubic-bezier(.2, .75, .25, 1); }
 .dialogHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: var(--space-4); }
 .dialogHeader h2 { font-size: var(--font-size-xl); }
-.dialogHeader > button { width: 32px; height: 32px; border: 1px solid var(--color-border); border-radius: 50%; background: transparent; color: var(--color-text-secondary); font-size: 20px; cursor: pointer; }
-.createDialog form { display: flex; flex-direction: column; gap: 12px; }
-.createDialog form > label,
+.dialogHeader > button { width: 36px; height: 36px; border: 1px solid var(--color-border); border-radius: 50%; background: transparent; color: var(--color-text-secondary); font-size: 20px; cursor: pointer; }
+.dialogHeader > button:hover:not(:disabled) { background: var(--color-bg); color: var(--color-text-primary); }
+.noTaskProject { padding: 14px 0; color: var(--color-text-secondary); font-size: var(--font-size-sm); line-height: 1.6; }
+.noTaskProject .projectLink { margin-top: 12px; }
+.taskDrawer form { display: flex; flex: 1; flex-direction: column; gap: 14px; }
+.taskDrawer form > label,
 .formRow label { display: flex; flex: 1; flex-direction: column; gap: 5px; color: var(--color-text-secondary); font-size: var(--font-size-xs); font-weight: 600; }
-.createDialog input,
-.createDialog textarea,
-.createDialog select { width: 100%; min-height: 37px; padding: 8px 10px; border: 1px solid var(--color-border); border-radius: var(--radius-base); background: var(--color-surface); color: var(--color-text-primary); font: inherit; font-size: var(--font-size-sm); }
-.createDialog textarea { resize: vertical; }
+.taskDrawer input,
+.taskDrawer textarea,
+.taskDrawer select { width: 100%; min-height: 40px; padding: 8px 10px; border: 1px solid var(--color-border); border-radius: var(--radius-base); background: var(--color-surface); color: var(--color-text-primary); font: inherit; font-size: var(--font-size-sm); }
+.taskDrawer textarea { resize: vertical; }
 .formRow { display: flex; gap: 12px; }
-.dialogActions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
+.drawerActions { display: flex; justify-content: flex-end; gap: 8px; margin-top: auto; padding-top: 20px; }
 .cancelButton { min-height: 37px; padding: 0 12px; border: 1px solid var(--color-border); border-radius: var(--radius-base); background: transparent; color: var(--color-text-secondary); font: inherit; font-size: var(--font-size-sm); cursor: pointer; }
+.cancelButton:hover:not(:disabled) { background: var(--color-bg); }
+@keyframes drawerFadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes drawerSlideIn { from { transform: translateX(24px); opacity: .8; } to { transform: translateX(0); opacity: 1; } }
 
 @media (max-width: 960px) {
   .filterControls { flex-basis: 100%; }
@@ -1208,7 +1214,7 @@ a.row:hover {
   .workTaskMeta { justify-content: flex-start; }
   .quietCompleted { display: none; }
   .formRow { flex-direction: column; }
-  .createDialog { padding: 16px; }
+  .taskDrawer { padding: 18px; }
   .sprintProgressSummary { align-items: flex-start; flex-direction: column; }
   .sprintProgressSummary .sprintProgressTrack { width: 100%; }
 }

@@ -28,7 +28,12 @@ class TeamMembership(models.Model):
 
     def clean(self):
         # Cross-module validation: User must be in the organization to join its team.
-        if not OrganizationMembership.objects.filter(user=self.user, organization=self.team.organization, is_active=True).exists():
+        if not OrganizationMembership.objects.filter(
+            user=self.user,
+            organization=self.team.organization,
+            is_active=True,
+            status=OrganizationMembership.Status.ACTIVE,
+        ).exists():
             raise ValidationError("User must be an active member of the organization to join this team.")
 
     def save(self, *args, **kwargs):

@@ -12,6 +12,11 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use((config) => {
   const token = localStorage.getItem('access_token');
   if (token) config.headers.Authorization = `Bearer ${token}`;
+  const organizationId = localStorage.getItem('current_organization_id');
+  const isAuthenticationRequest = config.url?.startsWith('/auth/');
+  if (organizationId && !isAuthenticationRequest) {
+    config.headers['X-Organization-ID'] = organizationId;
+  }
   return config;
 });
 
@@ -47,6 +52,15 @@ export const authApi = {
   register:(data)  => apiClient.post('/auth/register/', data),
   refresh: (token) => apiClient.post('/auth/token/refresh/', { refresh: token }),
   me:      ()      => apiClient.get('/auth/me/'),
+  updateProfile: (data) => apiClient.patch('/auth/me/', data),
+  uploadAvatar: (formData) => apiClient.post('/auth/me/avatar/', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
+  removeAvatar: () => apiClient.delete('/auth/me/avatar/'),
+  preferences: () => apiClient.get('/auth/me/preferences/'),
+  updatePreferences: (data) => apiClient.patch('/auth/me/preferences/', data),
+  acceptInvitation: (token) => apiClient.post('/auth/invitations/accept/', { token }),
+  acceptInvitationCode: (code) => apiClient.post('/auth/invitations/accept/', { code }),
 };
 
 // ─── Organizations ────────────────────────────────────────────────
@@ -54,6 +68,13 @@ export const organizationsApi = {
   list:     ()   => apiClient.get('/organizations/'),
   get:      (id) => apiClient.get(`/organizations/${id}/`),
   members:  (id) => apiClient.get(`/organizations/${id}/members/`),
+  update:   (id, data) => apiClient.patch(`/organizations/${id}/`, data, data instanceof FormData
+    ? { headers: { 'Content-Type': 'multipart/form-data' } }
+    : undefined),
+  create:   (data) => apiClient.post('/organizations/', data),
+  permissions: (id) => apiClient.get(`/organizations/${id}/settings-permissions/`),
+  invitations: (id) => apiClient.get(`/organizations/${id}/invitations/`),
+  invite: (id, data) => apiClient.post(`/organizations/${id}/invitations/`, data),
   teams:    (id) => apiClient.get(`/organizations/${id}/teams/`),
   createTeam: (id, data) => apiClient.post(`/organizations/${id}/teams/`, data),
   projects: (id) => apiClient.get(`/organizations/${id}/projects/`),

@@ -20,7 +20,7 @@
 
 .eyebrow,
 .sectionEyebrow {
-  color: var(--color-sage-dark);
+  color: var(--color-text-secondary);
   font-size: var(--font-size-xs);
   font-weight: 700;
   letter-spacing: 0.09em;
@@ -120,7 +120,7 @@
 
 .overviewMetric:nth-child(1) strong { color: var(--color-info); }
 .overviewMetric:nth-child(2) strong { color: var(--color-warning); }
-.overviewMetric:nth-child(4) strong { color: var(--color-success); }
+.overviewMetric:nth-child(4) strong { color: var(--color-text-primary); }
 
 .overviewMetric span {
   color: var(--color-text-secondary);
@@ -161,7 +161,7 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  color: var(--color-sage-dark);
+  color: var(--color-slate);
   font-size: var(--font-size-sm);
   font-weight: 600;
   transition: gap var(--transition-fast), color var(--transition-fast);
@@ -169,7 +169,7 @@
 
 .viewAll:hover {
   gap: var(--space-2);
-  color: var(--color-sage);
+  color: var(--color-text-primary);
 }
 
 .projectList {
@@ -206,7 +206,7 @@
 }
 
 .markClay { background: var(--color-clay-bg); color: var(--color-clay); }
-.markSage { background: var(--color-sage-light); color: var(--color-sage-dark); }
+.markSage { background: var(--color-slate-bg); color: var(--color-slate); }
 .markSand { background: var(--color-amber-bg); color: var(--color-amber); }
 .markSlate { background: var(--color-slate-bg); color: var(--color-slate); }
 
@@ -234,11 +234,11 @@
 }
 
 .projectRow:hover .projectTitleLine strong {
-  color: var(--color-sage-dark);
+  color: var(--color-text-primary);
 }
 
 .projectStatus {
-  color: var(--color-sage-dark);
+  color: var(--color-slate);
   font-size: var(--font-size-2xs);
   font-weight: 700;
   letter-spacing: 0.07em;
@@ -315,12 +315,12 @@
 }
 
 .sectionEmpty svg {
-  color: var(--color-sage);
+  color: var(--color-slate);
 }
 
 .sectionEmpty a {
   margin-left: auto;
-  color: var(--color-sage-dark);
+  color: var(--color-slate);
   font-size: var(--font-size-xs);
   font-weight: 600;
 }
@@ -370,7 +370,7 @@
   height: 11px;
   flex: 0 0 auto;
   margin-top: 3px;
-  border: 2px solid var(--color-sage);
+  border: 2px solid var(--color-slate);
   border-radius: 50%;
   background: var(--color-bg);
 }

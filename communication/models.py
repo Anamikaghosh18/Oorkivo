@@ -65,16 +65,29 @@ class Notification(models.Model):
         MENTION = 'MENTION', 'Mention'
         ASSIGNMENT = 'ASSIGNMENT', 'Assignment'
         UPDATE = 'UPDATE', 'Update'
+        TASK_ASSIGNED = 'TASK_ASSIGNED', 'Task assigned'
+        TASK_COMMENTED = 'TASK_COMMENTED', 'Task commented'
+        TASK_MENTIONED = 'TASK_MENTIONED', 'Task mention'
+        TASK_STATUS_CHANGED = 'TASK_STATUS_CHANGED', 'Task status changed'
+        PROJECT_UPDATED = 'PROJECT_UPDATED', 'Project updated'
+        SPRINT_STARTED = 'SPRINT_STARTED', 'Sprint started'
+        SPRINT_ENDING = 'SPRINT_ENDING', 'Sprint ending'
+        MILESTONE_UPDATED = 'MILESTONE_UPDATED', 'Milestone updated'
+        TASK_DUE = 'TASK_DUE', 'Task due'
+        TASK_OVERDUE = 'TASK_OVERDUE', 'Task overdue'
 
     recipient = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='notifications')
-    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='triggered_notifications')
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='triggered_notifications')
     
     type = models.CharField(max_length=50, choices=NotificationTypes.choices)
+    title = models.CharField(max_length=180, blank=True)
     message = models.CharField(max_length=255)
     
     # Context (Where did this happen?)
     task = models.ForeignKey(Task, on_delete=models.CASCADE, null=True, blank=True)
     project = models.ForeignKey(Project, on_delete=models.CASCADE, null=True, blank=True)
+    sprint = models.ForeignKey('projects.Sprint', on_delete=models.CASCADE, null=True, blank=True)
+    dedupe_key = models.CharField(max_length=255, unique=True, null=True, blank=True)
     
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)

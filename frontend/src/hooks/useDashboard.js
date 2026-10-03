@@ -5,6 +5,7 @@
  */
 import { useState, useEffect } from 'react';
 import { authApi, communicationApi, organizationsApi, tasksApi } from '../services/api';
+import { selectCurrentOrganization } from '../utils/organizationContext';
 
 function getRows(data) {
   const rows = data?.results ?? data;
@@ -33,15 +34,11 @@ export function useDashboard() {
       setActivityError(null);
 
       try {
-        const [meResponse, organizationsResponse] = await Promise.all([
-          authApi.me(),
-          organizationsApi.list(),
-        ]);
+        const meResponse = await authApi.me();
         if (cancelled) return;
         setUser(meResponse.data);
 
-        const organizations = getRows(organizationsResponse.data);
-        const firstOrg = organizations[0] ?? null;
+        const firstOrg = selectCurrentOrganization(meResponse.data);
         setOrg(firstOrg);
 
         if (!firstOrg) {

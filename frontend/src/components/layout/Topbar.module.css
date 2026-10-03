@@ -27,6 +27,39 @@
   transition: background var(--transition-fast);
 }
 .orgSwitcher:hover { background: var(--color-bg); }
+.orgMenuWrap { position: relative; }
+.organizationMenu {
+  position: absolute;
+  z-index: 120;
+  top: calc(100% + 8px);
+  left: 0;
+  display: flex;
+  width: min(280px, calc(100vw - 24px));
+  flex-direction: column;
+  padding: 5px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
+}
+.organizationMenu button {
+  display: flex;
+  min-height: 48px;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 3px;
+  padding: 6px 9px;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-primary);
+  text-align: left;
+}
+.organizationMenu button:hover:not(:disabled) { background: var(--color-bg); }
+.organizationMenu button:disabled { cursor: default; background: var(--color-sage-light); }
+.organizationMenu button span { font-size: var(--font-size-sm); font-weight: 600; }
+.organizationMenu button small,
+.noOrganizations { color: var(--color-text-secondary); font-size: var(--font-size-xs); }
+.noOrganizations { padding: 10px; }
 
 .orgIcon {
   width: 22px;
@@ -61,6 +94,7 @@
 
 /* ── Right section ──────────────────────────────────────────── */
 .right {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--space-1);
@@ -145,10 +179,92 @@
   right: 5px;
   width: 7px;
   height: 7px;
-  background: var(--color-sage);
+  background: var(--color-rose);
   border: 2px solid var(--color-surface);
   border-radius: 50%;
 }
+
+.notificationPanel,
+.userMenu {
+  position: absolute;
+  z-index: 120;
+  top: calc(100% + 8px);
+  right: 0;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
+}
+
+.notificationPanel {
+  width: min(390px, calc(100vw - 24px));
+  max-height: min(520px, calc(100vh - 80px));
+  overflow-y: auto;
+}
+
+.panelHeading {
+  position: sticky;
+  z-index: 1;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 15px;
+  border-bottom: 1px solid var(--color-border-subtle);
+  background: var(--color-surface);
+}
+
+.panelHeading strong { color: var(--color-text-primary); font-size: var(--font-size-sm); }
+.panelHeading button { display: inline-flex; align-items: center; gap: 5px; color: var(--color-sage-dark); font-size: 11px; }
+.panelHeading button:disabled { color: var(--color-text-tertiary); cursor: default; }
+.notificationError { padding: 10px 14px; color: var(--color-danger); font-size: var(--font-size-xs); }
+.notificationState { padding: 22px 15px; color: var(--color-text-secondary); font-size: var(--font-size-sm); text-align: center; }
+.notificationList { list-style: none; }
+
+.notificationItem {
+  display: flex;
+  width: 100%;
+  min-height: 68px;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--color-border-subtle);
+  color: inherit;
+  text-align: left;
+}
+
+.notificationItem:hover { background: var(--color-bg); }
+.notificationUnread { background: var(--color-slate-bg); }
+.notificationCopy { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 4px; }
+.notificationCopy strong { color: var(--color-text-primary); font-size: 12px; font-weight: 650; }
+.notificationCopy span { color: var(--color-text-secondary); font-size: 11px; line-height: 1.45; }
+.notificationCopy time { color: var(--color-text-tertiary); font-size: 10px; }
+.notificationItem > i { width: 7px; height: 7px; flex: 0 0 auto; margin-top: 5px; border-radius: 50%; background: var(--color-slate); }
+
+.userMenu {
+  display: flex;
+  min-width: 150px;
+  flex-direction: column;
+  padding: 5px;
+}
+
+.userMenu a,
+.userMenu button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 0 9px;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-xs);
+  text-align: left;
+}
+
+.userMenu a:hover,
+.userMenu button:hover { background: var(--color-bg); }
 
 /* ── User button ────────────────────────────────────────────── */
 .userBtn {

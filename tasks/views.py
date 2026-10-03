@@ -12,11 +12,14 @@ from .models import TaskAttachment, SavedTaskView
 from .serializers import TaskAttachmentSerializer, SavedTaskViewSerializer, TaskSerializer
 from .permissions import HasTaskAccess
 from communication.models import Activity
+from communication.models import Notification
+from communication.services import create_notification, notify_project_members
 from communication.serializers import ActivitySerializer
 from projects.models import Project
 from projects.models import ProjectMembership
 from organizations.models import OrganizationMembership
 from projects.models import Sprint
+from organizations.context import active_organization_ids, current_organization_id
 
 MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024
 ALLOWED_ATTACHMENT_TYPES = {
@@ -49,11 +52,13 @@ class TaskViewSet(mixins.RetrieveModelMixin,
     def get_queryset(self):
        
         user = self.request.user
-        org_ids = OrganizationMembership.objects.filter(
-            user=user, is_active=True
-        ).values_list('organization_id', flat=True)
-        
-        return Task.objects.filter(project__organization_id__in=org_ids).select_related(
+        queryset = Task.objects.filter(
+            project__organization_id__in=active_organization_ids(user)
+        )
+        organization_id = current_organization_id(self.request)
+        if organization_id is not None:
+            queryset = queryset.filter(project__organization_id=organization_id)
+        return queryset.select_related(
             'created_by', 'assigned_to', 'project', 'project__organization'
         ).prefetch_related('subtasks', 'dependencies', 'dependents')
         
@@ -80,6 +85,26 @@ class TaskViewSet(mixins.RetrieveModelMixin,
             events.append((Activity.ActionTypes.ASSIGNED, {
                 'old': before['assigned_to_id'], 'new': updated.assigned_to_id,
             }))
+            if updated.assigned_to:
+                create_notification(
+                    recipient=updated.assigned_to,
+                    actor=self.request.user,
+                    kind=Notification.NotificationTypes.TASK_ASSIGNED,
+                    title='You were assigned a task',
+                    message=f'{self.request.user.first_name or self.request.user.email} assigned you "{updated.title}".',
+                    task=updated,
+                    project=updated.project,
+                )
+        if before['status'] != updated.status and updated.assigned_to:
+            create_notification(
+                recipient=updated.assigned_to,
+                actor=self.request.user,
+                kind=Notification.NotificationTypes.TASK_STATUS_CHANGED,
+                title='Task status changed',
+                message=f'"{updated.title}" moved to {updated.get_status_display()}.',
+                task=updated,
+                project=updated.project,
+            )
         if before['due_date'] != updated.due_date:
             events.append((Activity.ActionTypes.DUE_DATE_CHANGED, {
                 'old': str(before['due_date']) if before['due_date'] else None,
@@ -105,13 +130,23 @@ class TaskViewSet(mixins.RetrieveModelMixin,
                         action=Activity.ActionTypes.MILESTONE_COMPLETED,
                         details={'milestone_id': milestone.id, 'milestone_title': milestone.title},
                     )
+                    notify_project_members(
+                        project=updated.project,
+                        actor=self.request.user,
+                        kind=Notification.NotificationTypes.MILESTONE_UPDATED,
+                        title='Milestone completed',
+                        message=f'{milestone.title} was completed.',
+                        dedupe_key=f'milestone-completed:{milestone.id}',
+                    )
 
     @action(detail=True, methods=['get', 'post'])
     def subtasks(self, request, pk=None):
         parent = self.get_object()
         if request.method == 'GET':
             rows = parent.subtasks.select_related('assigned_to', 'created_by', 'project')
-            return Response(TaskSerializer(rows, many=True).data)
+            return Response(TaskSerializer(
+                rows, many=True, context={'request': request}
+            ).data)
         can_create = parent.assigned_to_id == request.user.id or self._has_management_rights(parent)
         if not can_create:
             return Response({'detail': 'Only the assignee or a project manager can add subtasks.'}, status=status.HTTP_403_FORBIDDEN)
@@ -119,7 +154,9 @@ class TaskViewSet(mixins.RetrieveModelMixin,
         requested_assignee = request.data.get('assigned_to')
         if not is_manager and requested_assignee not in (None, '', request.user.id, str(request.user.id)):
             return Response({'detail': 'Only project managers can assign subtasks to other members.'}, status=status.HTTP_403_FORBIDDEN)
-        serializer = TaskSerializer(data=request.data, context={'project': parent.project})
+        serializer = TaskSerializer(
+            data=request.data, context={'project': parent.project, 'request': request}
+        )
         if serializer.is_valid():
             save_options = {'project': parent.project, 'created_by': request.user, 'parent_task': parent}
             if not is_manager:
@@ -130,14 +167,18 @@ class TaskViewSet(mixins.RetrieveModelMixin,
                 action=Activity.ActionTypes.CREATED,
                 details={'parent_task_id': parent.id, 'parent_task_title': parent.title},
             )
-            return Response(TaskSerializer(subtask).data, status=status.HTTP_201_CREATED)
+            return Response(TaskSerializer(
+                subtask, context={'request': request}
+            ).data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=True, methods=['get'])
     def activity(self, request, pk=None):
         task = self.get_object()
         rows = Activity.objects.filter(task=task).select_related('actor')
-        return Response(ActivitySerializer(rows[:100], many=True).data)
+        return Response(ActivitySerializer(
+            rows[:100], many=True, context={'request': request}
+        ).data)
 
     @action(detail=True, methods=['get', 'post'], url_path='attachments')
     def attachments(self, request, pk=None):
@@ -197,6 +238,7 @@ class TaskViewSet(mixins.RetrieveModelMixin,
             organization=task.project.organization,
             access_level__in=[OrganizationMembership.AccessLevel.OWNER, OrganizationMembership.AccessLevel.ADMIN],
             is_active=True,
+            status=OrganizationMembership.Status.ACTIVE,
         ).exists()
         project_manager = ProjectMembership.objects.filter(
             user=self.request.user, project=task.project,
@@ -221,7 +263,8 @@ class ProjectTasksAPIView(APIView):
             user=user, 
             organization=org, 
             access_level__in=[OrganizationMembership.AccessLevel.OWNER, OrganizationMembership.AccessLevel.ADMIN],
-            is_active=True
+            is_active=True,
+            status=OrganizationMembership.Status.ACTIVE,
         ).exists()
         if is_org_admin:
             return True
@@ -231,7 +274,7 @@ class ProjectTasksAPIView(APIView):
             return True
             
         # 3. check team member
-        if project.team and project.team.memberships.filter(user=user, is_active=True).exists():
+        if project.team and project.team.memberships.filter(user=user).exists():
             return True
             
         return False
@@ -241,7 +284,8 @@ class ProjectTasksAPIView(APIView):
             user=user, 
             organization=project.organization, 
             access_level__in=[OrganizationMembership.AccessLevel.OWNER, OrganizationMembership.AccessLevel.ADMIN],
-            is_active=True
+            is_active=True,
+            status=OrganizationMembership.Status.ACTIVE,
         ).exists()
         if is_org_admin:
             return True
@@ -253,6 +297,9 @@ class ProjectTasksAPIView(APIView):
 
     def get(self, request, project_id):
         project = get_object_or_404(Project, id=project_id)
+        organization_id = current_organization_id(request)
+        if organization_id is not None and project.organization_id != organization_id:
+            return Response({'detail': 'Not permitted.'}, status=status.HTTP_404_NOT_FOUND)
         
         # Check if user has access to view project tasks
         if not self.check_project_access(request.user, project):

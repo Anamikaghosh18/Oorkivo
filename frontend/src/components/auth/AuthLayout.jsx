@@ -1,4 +1,5 @@
 import styles from './AuthLayout.module.css';
+import { ArrowUpRight, Check, Circle, LayoutDashboard, MoreHorizontal, Plus, UsersRound } from 'lucide-react';
 
 export function GoogleIcon() {
   return (
@@ -11,11 +12,61 @@ export function GoogleIcon() {
   );
 }
 
-export default function AuthLayout({ children, title, subtitle }) {
+function WorkspaceShowcase() {
   return (
-    <div className={styles.container}>
+    <div className={styles.workspaceShowcase} aria-label="Oorkivo workspace preview">
+      <div className={styles.showcaseTopbar}>
+        <span className={styles.showcaseWindowDots}><i /><i /><i /></span>
+        <span>oorkivo.app</span>
+        <ArrowUpRight size={14} aria-hidden="true" />
+      </div>
+      <div className={styles.showcaseBody}>
+        <aside className={styles.showcaseSidebar}>
+          <div className={styles.showcaseWorkspaceMark}>A</div>
+          <span className={styles.showcaseNavActive}><LayoutDashboard size={15} /></span>
+          <span className={styles.showcaseNav}><UsersRound size={15} /></span>
+          <span className={styles.showcaseAdd}><Plus size={15} /></span>
+        </aside>
+        <div className={styles.showcaseMain}>
+          <div className={styles.showcaseHeading}>
+            <div>
+              <span className={styles.showcaseEyebrow}>MONDAY, OCTOBER 5</span>
+              <strong>Product team</strong>
+            </div>
+            <MoreHorizontal size={18} aria-hidden="true" />
+          </div>
+          <div className={styles.showcaseMetrics}>
+            <div><span>In progress</span><strong>12 <small>tasks</small></strong></div>
+            <div><span>Completed</span><strong>28 <small>this week</small></strong></div>
+          </div>
+          <div className={styles.showcaseSectionTitle}><span>Today’s focus</span><span>View all</span></div>
+          <div className={styles.showcaseTask}>
+            <span className={styles.showcaseCheck}><Check size={11} /></span>
+            <span><strong>Finalize onboarding flow</strong><small>Website · Due today</small></span>
+            <i className={styles.showcasePriority} />
+          </div>
+          <div className={styles.showcaseTask}>
+            <span className={styles.showcaseCircle}><Circle size={13} /></span>
+            <span><strong>Review sprint goals</strong><small>Product · In review</small></span>
+            <i className={styles.showcaseReview} />
+          </div>
+          <div className={styles.showcaseFooter}>
+            <div className={styles.showcaseAvatars}><i>J</i><i>M</i><i>A</i></div>
+            <span>Everyone moving together</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function AuthLayout({ children, title, subtitle, variant }) {
+  const isOnboarding = variant === 'onboarding';
+  const isAuth = variant === 'auth';
+  return (
+    <div className={`${styles.container} ${isOnboarding ? styles.onboardingContainer : ''} ${isAuth ? styles.authContainer : ''}`}>
       {/* ── Left Column: Visual / Illustration ── */}
-      <div className={styles.visualCol}>
+      <div className={`${styles.visualCol} ${isOnboarding ? styles.onboardingVisual : ''} ${isAuth ? styles.authVisual : ''}`}>
         <div className={styles.visualContent}>
           <div className={styles.brand}>
             <div className={styles.logoMark}>
@@ -29,33 +80,60 @@ export default function AuthLayout({ children, title, subtitle }) {
             <span className={styles.brandName}>Oorkivo</span>
           </div>
 
-          <div className={styles.illustrationWrap}>
-            <svg viewBox="0 0 400 400" fill="none" className={styles.illustration}>
-              {/* Abstract Workspace Geometric Art using Moss/Sage/Warm tones */}
-              <circle cx="200" cy="200" r="180" fill="#253026" />
-              <rect x="120" y="140" width="160" height="180" rx="12" fill="#DED7C9" />
-              <rect x="140" y="100" width="160" height="180" rx="12" fill="#82907D" />
-              <rect x="80" y="200" width="140" height="100" rx="8" fill="#F7F4ED" />
-              <circle cx="120" cy="240" r="16" fill="#B79F8C" />
-              <rect x="150" y="235" width="40" height="10" rx="5" fill="#DED7C9" />
-              <rect x="170" y="140" width="100" height="8" rx="4" fill="#252923" fillOpacity="0.1" />
-              <rect x="170" y="160" width="70" height="8" rx="4" fill="#252923" fillOpacity="0.1" />
-              <path d="M260 220 L300 260 L280 280 Z" fill="#596957" />
-              <circle cx="280" cy="180" r="24" fill="#B79F8C" />
-            </svg>
-          </div>
-
-          <div className={styles.quoteWrap}>
-            <blockquote className={styles.quote}>
-              "Oorkivo has fundamentally transformed how our teams align, collaborate, and deliver premium work."
-            </blockquote>
-            <p className={styles.quoteAuthor}>— Senior Product Team</p>
-          </div>
+          {isOnboarding ? (
+            <>
+              <div className={styles.onboardingStory}>
+                <span>ONE SPACE. CLEAR MOMENTUM.</span>
+                <h2>Bring your team’s work into focus.</h2>
+                <p>Plan projects, share progress, and keep the next step clear for everyone.</p>
+              </div>
+              <div className={styles.illustrationWrap}><WorkspaceShowcase /></div>
+              <div className={styles.onboardingFootnote}><span><Check size={13} /></span> Thoughtful work starts with a shared space.</div>
+            </>
+          ) : isAuth ? (
+            <>
+              <div className={styles.authStory}>
+                <span>THE CALMER WAY TO GET THINGS DONE</span>
+                <h2>Good work happens when everyone’s in sync.</h2>
+                <p>Bring projects, people, and priorities together in one thoughtful workspace.</p>
+              </div>
+              <div className={styles.illustrationWrap}><WorkspaceShowcase /></div>
+              <div className={styles.authFootnote}>
+                <span className={styles.authAvatars}><i>J</i><i>M</i><i>A</i></span>
+                <span>One clear view for the whole team</span>
+                <span className={styles.authFootnoteDot} />
+                <span>Built for focused work</span>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className={styles.illustrationWrap}>
+                <svg viewBox="0 0 400 400" fill="none" className={styles.illustration}>
+                  <circle cx="200" cy="200" r="180" fill="#253026" />
+                  <rect x="120" y="140" width="160" height="180" rx="12" fill="#DED7C9" />
+                  <rect x="140" y="100" width="160" height="180" rx="12" fill="#82907D" />
+                  <rect x="80" y="200" width="140" height="100" rx="8" fill="#F7F4ED" />
+                  <circle cx="120" cy="240" r="16" fill="#B79F8C" />
+                  <rect x="150" y="235" width="40" height="10" rx="5" fill="#DED7C9" />
+                  <rect x="170" y="140" width="100" height="8" rx="4" fill="#252923" fillOpacity="0.1" />
+                  <rect x="170" y="160" width="70" height="8" rx="4" fill="#252923" fillOpacity="0.1" />
+                  <path d="M260 220 L300 260 L280 280 Z" fill="#596957" />
+                  <circle cx="280" cy="180" r="24" fill="#B79F8C" />
+                </svg>
+              </div>
+              <div className={styles.quoteWrap}>
+                <blockquote className={styles.quote}>
+                  "Oorkivo has fundamentally transformed how our teams align, collaborate, and deliver premium work."
+                </blockquote>
+                <p className={styles.quoteAuthor}>— Senior Product Team</p>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
       {/* ── Right Column: Form Area ── */}
-      <div className={styles.formCol}>
+      <div className={`${styles.formCol} ${isOnboarding ? styles.onboardingForm : ''} ${isAuth ? styles.authForm : ''}`}>
         <div className={styles.formContainer}>
           {/* Mobile brand (hidden on desktop) */}
           <div className={styles.mobileBrand}>

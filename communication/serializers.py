@@ -47,8 +47,37 @@ class ActivitySerializer(serializers.ModelSerializer):
 
 class NotificationSerializer(serializers.ModelSerializer):
     actor = UserMinimalSerializer(read_only=True)
+    sprint_name = serializers.CharField(source='sprint.name', read_only=True)
+    related_object_type = serializers.SerializerMethodField()
+    related_object_id = serializers.SerializerMethodField()
+    target_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Notification
-        fields = ['id', 'actor', 'type', 'message', 'task', 'project', 'is_read', 'created_at']
-        read_only_fields = ['id', 'actor', 'type', 'message', 'task', 'project', 'created_at']
+        fields = [
+            'id', 'actor', 'type', 'title', 'message', 'task', 'project',
+            'sprint', 'sprint_name', 'related_object_type', 'related_object_id',
+            'target_url', 'is_read', 'created_at',
+        ]
+        read_only_fields = fields
+
+    def get_related_object_type(self, notification):
+        if notification.task_id:
+            return 'task'
+        if notification.sprint_id:
+            return 'sprint'
+        if notification.project_id:
+            return 'project'
+        return None
+
+    def get_related_object_id(self, notification):
+        return notification.task_id or notification.sprint_id or notification.project_id
+
+    def get_target_url(self, notification):
+        if notification.task_id:
+            return f'/tasks/{notification.task_id}'
+        if notification.sprint_id:
+            return f'/projects/{notification.sprint.project_id}?sprint={notification.sprint_id}'
+        if notification.project_id:
+            return f'/projects/{notification.project_id}'
+        return None

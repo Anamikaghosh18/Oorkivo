@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Building2, ChevronDown, ChevronUp, FolderKanban, Plus, Search, Users, X } from 'lucide-react';
 import AppShell from '../components/layout/AppShell';
+import Avatar from '../components/Avatar';
 import { useDashboard } from '../hooks/useDashboard';
 import { organizationsApi, teamsApi } from '../services/api';
 import styles from './Teams.module.css';
@@ -20,16 +21,8 @@ function displayName(user) {
   return fullName || user?.email || 'Unknown member';
 }
 
-function initials(user) {
-  return displayName(user).split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase();
-}
-
-function TeamAvatar({ membership, index }) {
-  return (
-    <span className={`${styles.avatar} ${styles[`avatarTone${index % 4}`]}`} title={displayName(membership.user)}>
-      {initials(membership.user)}
-    </span>
-  );
+function TeamAvatar({ membership }) {
+  return <Avatar user={membership.user} size={27} className={styles.avatar} />;
 }
 
 function TeamMembers({ members, loading, error }) {
@@ -41,7 +34,7 @@ function TeamMembers({ members, loading, error }) {
     <ul className={styles.memberList}>
       {members.map((membership) => (
         <li className={styles.member} key={membership.id}>
-          <span className={styles.avatar}>{initials(membership.user)}</span>
+          <Avatar user={membership.user} size={27} className={styles.avatar} />
           <span className={styles.memberIdentity}>
             <strong>{displayName(membership.user)}</strong>
             {membership.user?.email && <small>{membership.user.email}</small>}
@@ -182,37 +175,33 @@ export default function Teams() {
           <button
             type="button"
             className={styles.createButton}
-            onClick={() => { setCreateError(''); setCreateOpen((open) => !open); }}
+            onClick={() => { setCreateError(''); setCreateOpen(true); }}
             disabled={!org?.id}
           >
-            {createOpen ? <X size={15} /> : <Plus size={15} />}
-            {createOpen ? 'Cancel' : 'New team'}
+            <Plus size={15} /> New team
           </button>
         </header>
 
         {createOpen && (
-          <form className={styles.createForm} onSubmit={handleCreateTeam}>
-            <div className={styles.formCopy}>
-              <strong>Create a team</strong>
-              <span>Give a group a shared home in your workspace.</span>
-            </div>
-            <label className={styles.teamNameField} htmlFor="team-name">
-              <span>Team name</span>
-              <input
-                id="team-name"
-                value={teamName}
-                onChange={(event) => setTeamName(event.target.value)}
-                placeholder="e.g. Product design"
-                maxLength={255}
-                autoFocus
-                required
-              />
-            </label>
-            <button type="submit" className={styles.createSubmit} disabled={creating || !teamName.trim()}>
-              {creating ? 'Creating…' : 'Create team'}
-            </button>
-            {createError && <p className={styles.formError} role="alert">{createError}</p>}
-          </form>
+          <div className={styles.modalBackdrop} role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !creating) setCreateOpen(false); }}>
+            <section className={styles.createModal} role="dialog" aria-modal="true" aria-labelledby="create-team-title">
+              <header className={styles.modalHeader}>
+                <div><span className={styles.eyebrow}>People &amp; collaboration</span><h2 id="create-team-title">Create a team</h2><p>Give a group a shared home in your workspace.</p></div>
+                <button type="button" aria-label="Close" onClick={() => setCreateOpen(false)} disabled={creating}><X size={18} /></button>
+              </header>
+              <form className={styles.createForm} onSubmit={handleCreateTeam}>
+                <label className={styles.teamNameField} htmlFor="team-name">
+                  <span>Team name</span>
+                  <input id="team-name" value={teamName} onChange={(event) => setTeamName(event.target.value)} placeholder="e.g. Product design" maxLength={255} autoFocus required />
+                </label>
+                {createError && <p className={styles.formError} role="alert">{createError}</p>}
+                <div className={styles.modalActions}>
+                  <button type="button" className={styles.modalCancel} onClick={() => setCreateOpen(false)} disabled={creating}>Cancel</button>
+                  <button type="submit" className={styles.createSubmit} disabled={creating || !teamName.trim()}>{creating ? 'Creating…' : 'Create team'}</button>
+                </div>
+              </form>
+            </section>
+          </div>
         )}
 
         {error && (
@@ -287,7 +276,7 @@ export default function Teams() {
                       ) : memberData.loading ? (
                         <small>Loading people…</small>
                       ) : memberData.members.slice(0, 4).map((membership, avatarIndex) => (
-                        <TeamAvatar membership={membership} index={avatarIndex} key={membership.id ?? avatarIndex} />
+                        <TeamAvatar membership={membership} key={membership.id ?? avatarIndex} />
                       ))}
                       {!memberData.loading && !memberData.error && (
                         <small className={styles.peopleCount}>{memberData.members.length} {memberData.members.length === 1 ? 'person' : 'people'}</small>

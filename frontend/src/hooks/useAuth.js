@@ -6,7 +6,8 @@
  *   const { user, org, loading, error, login, logout } = useAuth();
  */
 import { useState, useEffect, useCallback } from 'react';
-import { authApi, organizationsApi } from '../services/api';
+import { authApi } from '../services/api';
+import { selectCurrentOrganization } from '../utils/organizationContext';
 
 export function useAuth() {
   const [user, setUser]       = useState(null);
@@ -21,14 +22,9 @@ export function useAuth() {
     setLoading(true);
     setError(null);
     try {
-      const [meRes, orgsRes] = await Promise.all([
-        authApi.me(),
-        organizationsApi.list(),
-      ]);
+      const meRes = await authApi.me();
       setUser(meRes.data);
-      // Use first organization the user belongs to
-      const orgs = orgsRes.data?.results ?? orgsRes.data;
-      setOrg(Array.isArray(orgs) && orgs.length > 0 ? orgs[0] : null);
+      setOrg(selectCurrentOrganization(meRes.data));
     } catch (err) {
       if (err.response?.status !== 401) {
         setError('Failed to load user data.');
@@ -56,9 +52,10 @@ export function useAuth() {
   const logout = useCallback(() => {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
+    localStorage.removeItem('current_organization_id');
     setUser(null);
     setOrg(null);
   }, []);
 
-  return { user, org, loading, error, login, register, logout };
+  return { user, org, loading, error, login, register, logout, reload: loadUserAndOrg };
 }

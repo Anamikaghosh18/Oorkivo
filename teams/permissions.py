@@ -1,6 +1,6 @@
 from rest_framework.permissions import BasePermission
 
-from users.models import OrganizationMembership
+from organizations.models import OrganizationMembership
 from .models import TeamMembership
 
 
@@ -15,7 +15,9 @@ class IsOrganizationMember(BasePermission):
 
         return OrganizationMembership.objects.filter(
             user=request.user,
-            organization_id=organization_id
+            organization_id=organization_id,
+            is_active=True,
+            status=OrganizationMembership.Status.ACTIVE,
         ).exists()
 
 
@@ -31,21 +33,22 @@ class CanManageTeam(BasePermission):
         try:
             membership = OrganizationMembership.objects.get(
                 user=request.user,
-                organization_id=view.kwargs.get("organization_id")
+                organization_id=view.kwargs.get("organization_id"),
+                is_active=True,
+                status=OrganizationMembership.Status.ACTIVE,
             )
         except OrganizationMembership.DoesNotExist:
             return False
 
         # Admin can manage everything
-        if membership.role == "ADMIN":
+        if membership.access_level in {
+            OrganizationMembership.AccessLevel.OWNER,
+            OrganizationMembership.AccessLevel.ADMIN,
+        }:
             return True
 
-        # Manager must belong to this team
-        if membership.role == "MANAGER":
-            return TeamMembership.objects.filter(
-                team_id=team_id,
-                user=request.user,
-                role="MANAGER"
-            ).exists()
-
-        return False
+        return TeamMembership.objects.filter(
+            team_id=team_id,
+            user=request.user,
+            role=TeamMembership.TeamRole.LEAD,
+        ).exists()
