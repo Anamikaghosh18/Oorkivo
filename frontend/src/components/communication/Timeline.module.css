@@ -1,13 +1,13 @@
 .timeline {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
 }
 
-/* Header */
 .header {
   padding: var(--space-4) var(--space-5);
   border-bottom: 1px solid var(--color-border-subtle);
@@ -18,11 +18,12 @@
 
 .title {
   font-size: var(--font-size-sm);
-  font-weight: 600;
-  color: var(--color-text-primary);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
 }
 
-/* Feed */
 .feed {
   padding: var(--space-5);
   display: flex;
@@ -31,9 +32,9 @@
   min-height: 120px;
   max-height: 480px;
   overflow-y: auto;
+  background: linear-gradient(180deg, rgba(247,245,239,0.4), rgba(255,255,255,0.2));
 }
 
-/* Empty */
 .emptyFeed {
   color: var(--color-text-tertiary);
   font-size: var(--font-size-sm);
@@ -41,7 +42,6 @@
   padding: var(--space-8) 0;
 }
 
-/* ── Avatar ──────────────────────────────────────────────────── */
 .avatar {
   border-radius: 50%;
   display: flex;
@@ -52,50 +52,74 @@
   letter-spacing: 0.01em;
 }
 
-.avatar-xs { width: 20px; height: 20px; font-size: 9px; }
-.avatar-sm { width: 28px; height: 28px; font-size: 10px; }
-.avatar-md { width: 34px; height: 34px; font-size: 13px; }
+.avatar-xs { width: 22px; height: 22px; font-size: 9px; }
+.avatar-sm { width: 30px; height: 30px; font-size: 10px; }
+.avatar-md { width: 36px; height: 36px; font-size: 13px; }
 
-/* ── Activity Entry ──────────────────────────────────────────── */
 .activityEntry {
   display: flex;
   align-items: flex-start;
   gap: var(--space-3);
+  position: relative;
+  padding-left: var(--space-2);
+}
+
+.activityEntry::before {
+  content: '';
+  position: absolute;
+  left: 12px;
+  top: 0;
+  bottom: -20px;
+  width: 1px;
+  background: var(--color-border-subtle);
+}
+
+.activityEntry:last-child::before {
+  bottom: 12px;
 }
 
 .activityLine {
-  width: 28px;
+  width: 24px;
   display: flex;
   justify-content: center;
   padding-top: 5px;
   flex-shrink: 0;
+  position: relative;
+  z-index: 1;
 }
 
 .activityDot {
-  width: 6px;
-  height: 6px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
-  background: var(--color-border);
-  border: 1.5px solid var(--color-sage-mid);
+  background: var(--color-surface);
+  border: 2px solid var(--color-sage-mid);
+  box-shadow: 0 0 0 3px rgba(137,149,131,0.15);
 }
 
 .activityBody {
   flex: 1;
   padding-top: 2px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
 }
 
 .activityActor {
-  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--color-text-primary);
 }
 
 .activityText {
-  font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
 }
 
-/* ── Comment Entry ───────────────────────────────────────────── */
+.entryTime {
+  display: block;
+  margin-top: var(--space-1);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
 .commentEntry {
   display: flex;
   gap: var(--space-3);
@@ -104,7 +128,7 @@
 
 .commentBody {
   flex: 1;
-  background: var(--color-surface-raised);
+  background: linear-gradient(180deg, rgba(236,233,225,0.6), rgba(255,255,255,0.9));
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-md);
   padding: var(--space-3) var(--space-4);
@@ -119,13 +143,8 @@
 
 .commentAuthor {
   font-size: var(--font-size-sm);
-  font-weight: 600;
+  font-weight: 700;
   color: var(--color-text-primary);
-}
-
-.entryTime {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-tertiary);
 }
 
 .commentContent {
@@ -135,7 +154,6 @@
   white-space: pre-wrap;
 }
 
-/* Comment action menu */
 .menuWrap {
   margin-left: auto;
   position: relative;
@@ -153,7 +171,9 @@
   opacity: 0;
 }
 
-.commentBody:hover .menuBtn { opacity: 1; }
+.commentBody:hover .menuBtn {
+  opacity: 1;
+}
 
 .menuBtn:hover {
   background: var(--color-border-subtle);
@@ -176,7 +196,7 @@
 
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(-4px); }
-  to   { opacity: 1; transform: translateY(0); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .menuItem {
@@ -197,7 +217,6 @@
 .menuDanger { color: var(--color-danger); }
 .menuDanger:hover { background: var(--color-danger-bg); }
 
-/* ── Comment Input ───────────────────────────────────────────── */
 .inputForm {
   display: flex;
   gap: var(--space-3);

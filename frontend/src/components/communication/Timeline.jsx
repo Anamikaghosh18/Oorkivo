@@ -25,6 +25,18 @@ function Avatar({ user, size = 'sm' }) {
   );
 }
 
+function formatEntryTime(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString('en', {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
 /* ── Activity Entry ────────────────────────────────────────── */
 function ActivityEntry({ item }) {
   return (
@@ -36,7 +48,7 @@ function ActivityEntry({ item }) {
         <span className={styles.activityActor}>{item.actor?.first_name || 'System'}</span>
         {' '}
         <span className={styles.activityText}>{item.actionText}</span>
-        <time className={styles.entryTime}>{item.created_at}</time>
+        <time className={styles.entryTime}>{formatEntryTime(item.created_at)}</time>
       </div>
     </div>
   );
@@ -67,7 +79,7 @@ function CommentEntry({ comment, currentUserId, onDelete }) {
           <span className={styles.commentAuthor}>
             {comment.author?.first_name || comment.author?.username}
           </span>
-          <time className={styles.entryTime}>{comment.created_at}</time>
+          <time className={styles.entryTime}>{formatEntryTime(comment.created_at)}</time>
 
           {isAuthor && (
             <div className={styles.menuWrap} ref={menuRef}>
@@ -156,16 +168,11 @@ function CommentInput({ onSubmit, currentUser }) {
 }
 
 /* ── Timeline (main export) ────────────────────────────────── */
-export default function Timeline({ items, currentUserId, currentUser, onAddComment }) {
-  const handleDelete = (id) => {
-    // Wire to API when ready
-    console.log('delete comment', id);
-  };
-
+export default function Timeline({ items, currentUserId, currentUser, onAddComment, onDeleteComment }) {
   return (
     <div className={styles.timeline}>
       <div className={styles.header}>
-        <h3 className={styles.title}>Activity & Discussion</h3>
+        <h3 className={styles.title}>Discussion</h3>
       </div>
 
       <div className={styles.feed}>
@@ -180,7 +187,7 @@ export default function Timeline({ items, currentUserId, currentUser, onAddComme
               key={`c-${item.id}`}
               comment={item}
               currentUserId={currentUserId}
-              onDelete={handleDelete}
+              onDelete={onDeleteComment}
             />
           ) : (
             <ActivityEntry key={`a-${item.id}`} activity={item} />

@@ -1,8 +1,7 @@
 .section {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  overflow: hidden;
+  background: var(--color-surface-raised);
+  border-radius: var(--radius-lg);
+  padding: var(--space-2);
 }
 
 /* Section header */
@@ -29,6 +28,7 @@
 .list {
   display: flex;
   flex-direction: column;
+  gap: var(--space-1);
 }
 
 /* Row layout */
@@ -36,21 +36,25 @@
   display: grid;
   grid-template-columns: 1fr 110px 90px;
   align-items: center;
-  padding: var(--space-3) var(--space-5);
-  border-bottom: 1px solid var(--color-border-subtle);
-  transition: background var(--transition-fast);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-surface);
+  border-radius: var(--radius-base);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
   gap: var(--space-4);
 }
 
-.row:last-child { border-bottom: none; }
-
-.row:not(.headerRow):hover { background: var(--color-bg); }
+.row:not(.headerRow):hover { 
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm); 
+}
 
 /* Header row */
 .headerRow {
   padding-top: var(--space-2);
   padding-bottom: var(--space-2);
-  background: var(--color-surface-raised);
+  background: transparent;
+  box-shadow: none;
 }
 
 .colProject,

@@ -2,28 +2,45 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;1,14..32,400&display=swap');
 
 :root {
-  /* ── Core Palette ─────────────────────────────────────────── */
-  --color-bg:               #F4F5F2;
-  --color-surface:          #FFFFFF;
-  --color-surface-raised:   #FAFBF9;
-  --color-text-primary:     #1C1F1C;
-  --color-text-secondary:   #6B7269;
-  --color-text-tertiary:    #9BA599;
-  --color-border:           #E2E5DF;
-  --color-border-subtle:    #ECEEE9;
+  /* ── Primary Foundation ── */
+  --color-bg:               #F6F3EC; /* Warm Ivory */
+  --color-surface:          #FFFDF8;
+  --color-surface-raised:   #EEEAE1; /* Soft Stone */
+  --color-border:           #D9D5CC; /* Warm Gray */
+  --color-border-subtle:    #E5E2DA;
 
-  --color-sage:             #5E7260;
-  --color-sage-light:       #ECF0EB;
-  --color-sage-mid:         #D4DDD3;
-  --color-sage-dark:        #4A5B4C;
-  --color-sage-hover:       #536755;
+  --color-text-primary:     #252823; /* Deep Charcoal */
+  --color-text-secondary:   #555952; /* Soft Charcoal */
+  --color-text-tertiary:    #737A76; /* Slate */
 
-  --color-success:          #4E7C5A;
-  --color-success-bg:       #EAF2EC;
-  --color-warning:          #9C7834;
-  --color-warning-bg:       #FBF3E3;
-  --color-danger:           #A84848;
-  --color-danger-bg:        #FAEAEA;
+  /* ── Brand Accents (Moss) ── */
+  --color-sage-dark:        #465444; /* Deep Moss */
+  --color-sage:             #64745F; /* Moss */
+  --color-sage-mid:         #899583; /* Sage */
+  --color-sage-light:       #B2B9AA; /* Soft Sage */
+  --color-sage-hover:       #465444;
+
+  /* ── Sidebar ── */
+  --color-sidebar-bg:       #292C27;
+  --color-sidebar-active:   #3E493D;
+  --color-sidebar-text:     #D9DDD4;
+  --color-sidebar-muted:    #9DA49A;
+  --color-sidebar-border:   #3A3E38;
+
+  /* ── Supporting Tones ── */
+  --color-clay:             #B69D89; /* Muted Clay */
+  --color-sand:             #D8CBB9; /* Warm Sand */
+  --color-rose:             #B99F9B; /* Dusty Rose */
+  --color-amber:            #B49A69; /* Muted Amber */
+  --color-slate:            #737A76; /* Slate */
+
+  /* ── Semantic Mappings ── */
+  --color-success:          var(--color-sage-dark);
+  --color-success-bg:       #EAECE7;
+  --color-warning:          var(--color-amber);
+  --color-warning-bg:       #F6F2EB;
+  --color-danger:           var(--color-rose);
+  --color-danger-bg:        #F6EFEE;
 
   /* ── Typography ───────────────────────────────────────────── */
   --font-family:        'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -99,7 +116,9 @@ body {
   font-family: var(--font-family);
   font-size: var(--font-size-base);
   color: var(--color-text-primary);
-  background: var(--color-bg);
+  background-color: var(--color-bg);
+  background-image: radial-gradient(var(--color-border) 1px, transparent 1px);
+  background-size: 20px 20px;
   line-height: var(--leading-normal);
 }
 

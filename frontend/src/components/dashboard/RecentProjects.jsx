@@ -54,17 +54,16 @@ function isOverdue(dateStr) {
 function EmptyState() {
   return (
     <div className={styles.empty}>
-      {/* Minimal SVG illustration */}
-      <svg className={styles.emptyIllustration} width="64" height="64" viewBox="0 0 64 64" fill="none">
-        <rect x="8" y="12" width="48" height="36" rx="4" stroke="#D4DDD3" strokeWidth="2" fill="#F4F5F2"/>
-        <rect x="16" y="22" width="20" height="2.5" rx="1.25" fill="#C5CFC4"/>
-        <rect x="16" y="28" width="32" height="2.5" rx="1.25" fill="#D4DDD3"/>
-        <rect x="16" y="34" width="26" height="2.5" rx="1.25" fill="#D4DDD3"/>
-        <circle cx="52" cy="44" r="10" fill="#ECF0EB" stroke="#D4DDD3" strokeWidth="1.5"/>
-        <path d="M48 44l3 3 5-5" stroke="#5E7260" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+      <svg className={styles.emptyIllustration} width="100" height="100" viewBox="0 0 100 100" fill="none">
+        <circle cx="50" cy="50" r="40" fill="var(--color-bg)" />
+        <rect x="30" y="30" width="40" height="40" rx="8" fill="var(--color-surface-raised)" stroke="var(--color-border)" strokeWidth="1.5" />
+        <path d="M42 45 C45 42, 55 42, 58 45" stroke="var(--color-sage)" strokeWidth="2" strokeLinecap="round" />
+        <path d="M40 55 H60" stroke="var(--color-border-subtle)" strokeWidth="2" strokeLinecap="round" />
+        <circle cx="65" cy="65" r="12" fill="var(--color-surface)" stroke="var(--color-border)" strokeWidth="1.5" />
+        <path d="M61 65 L64 68 L69 61" stroke="var(--color-sage)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
       <p className={styles.emptyTitle}>No projects yet</p>
-      <p className={styles.emptyText}>Create your first project to get started.</p>
+      <p className={styles.emptyText}>Create your first project to organize your team's work.</p>
     </div>
   );
 }

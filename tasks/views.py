@@ -29,6 +29,14 @@ class TaskViewSet(mixins.RetrieveModelMixin,
         return Task.objects.filter(project__organization_id__in=org_ids).select_related(
             'created_by', 'assigned_to', 'project', 'project__organization'
         )
+        
+    def perform_update(self, serializer):
+        serializer.instance._current_user = self.request.user
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        instance._current_user = self.request.user
+        instance.delete()
 
 
 from rest_framework.views import APIView
@@ -111,8 +119,9 @@ class ProjectTasksAPIView(APIView):
         serializer = TaskSerializer(data=request.data)
         if serializer.is_valid():
             try:
-    
-                serializer.save(created_by=request.user, project=project)
+                task = serializer.save(created_by=request.user, project=project)
+                task._current_user = request.user
+                task.save()
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             except Exception as e:
                 return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
