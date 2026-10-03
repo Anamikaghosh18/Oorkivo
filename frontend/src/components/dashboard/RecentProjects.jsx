@@ -1,15 +1,11 @@
 import styles from './RecentProjects.module.css';
 
 const STATUS_META = {
-  ACTIVE:    { label: 'Active',    cls: 'active',    dot: '#4E7C5A' },
-  PLANNING:  { label: 'Planning',  cls: 'planning',  dot: '#9BA599' },
-  ON_HOLD:   { label: 'On Hold',   cls: 'onHold',    dot: '#9C7834' },
-  COMPLETED: { label: 'Completed', cls: 'completed', dot: '#5E7260' },
+  ACTIVE:    { label: 'Active',    cls: 'active',    dot: 'var(--color-sage-dark)' },
+  PLANNING:  { label: 'Planning',  cls: 'planning',  dot: 'var(--color-slate)' },
+  ON_HOLD:   { label: 'On Hold',   cls: 'onHold',    dot: 'var(--color-amber)' },
+  COMPLETED: { label: 'Completed', cls: 'completed', dot: 'var(--color-sage-dark)' },
 };
-
-const PROJECT_COLORS = [
-  '#5E7260', '#4A6FA5', '#8B5E6B', '#7A6A47', '#3D7A6F',
-];
 
 function ProjectMonogram({ name }) {
   const initials = name
@@ -18,12 +14,8 @@ function ProjectMonogram({ name }) {
     .join('')
     .slice(0, 2)
     .toUpperCase();
-  const colorIdx = name.charCodeAt(0) % PROJECT_COLORS.length;
   return (
-    <div
-      className={styles.monogram}
-      style={{ background: PROJECT_COLORS[colorIdx] }}
-    >
+    <div className={styles.monogram}>
       {initials}
     </div>
   );

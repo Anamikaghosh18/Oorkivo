@@ -32,6 +32,11 @@ class TaskCommentListCreateView(generics.ListCreateAPIView):
             raise PermissionDenied("You do not have access to this task.")
             
         comment = serializer.save(author=self.request.user, task=task)
+        Activity.objects.create(
+            project=task.project, task=task, actor=self.request.user,
+            action=Activity.ActionTypes.COMMENTED,
+            details={'comment_id': comment.id},
+        )
         
         # Trigger notifications for mentions
         for user in comment.mentions.all():

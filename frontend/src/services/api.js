@@ -73,6 +73,18 @@ export const projectsApi = {
   delete:  (id)         => apiClient.delete(`/projects/${id}/`),
   members: (id)         => apiClient.get(`/projects/${id}/members/`),
   tasks:   (id, params) => apiClient.get(`/projects/${id}/tasks/`, { params }),
+  milestones: (id)      => apiClient.get(`/projects/${id}/milestones/`),
+  createMilestone: (id, data) => apiClient.post(`/projects/${id}/milestones/`, data),
+  updateMilestone: (id, milestoneId, data) => apiClient.patch(`/projects/${id}/milestones/${milestoneId}/`, data),
+  deleteMilestone: (id, milestoneId) => apiClient.delete(`/projects/${id}/milestones/${milestoneId}/`),
+  activity: (id)        => apiClient.get(`/projects/${id}/activity/`),
+  sprints: (id)          => apiClient.get(`/projects/${id}/sprints/`),
+  createSprint: (id, data) => apiClient.post(`/projects/${id}/sprints/`, data),
+  getSprint: (id, sprintId) => apiClient.get(`/projects/${id}/sprints/${sprintId}/`),
+  updateSprint: (id, sprintId, data) => apiClient.patch(`/projects/${id}/sprints/${sprintId}/`, data),
+  deleteSprint: (id, sprintId) => apiClient.delete(`/projects/${id}/sprints/${sprintId}/`),
+  startSprint: (id, sprintId) => apiClient.post(`/projects/${id}/sprints/${sprintId}/start/`),
+  completeSprint: (id, sprintId) => apiClient.post(`/projects/${id}/sprints/${sprintId}/complete/`),
 };
 
 // ─── Tasks ────────────────────────────────────────────────────────
@@ -84,6 +96,20 @@ export const tasksApi = {
   delete:     (id)                => apiClient.delete(`/tasks/${id}/`),
   comments:   (id)                => apiClient.get(`/tasks/${id}/comments/`),
   addComment: (id, data)          => apiClient.post(`/tasks/${id}/comments/`, data),
+  activity:   (id)                => apiClient.get(`/tasks/${id}/activity/`),
+  subtasks:   (id)                => apiClient.get(`/tasks/${id}/subtasks/`),
+  addSubtask: (id, data)          => apiClient.post(`/tasks/${id}/subtasks/`, data),
+  attachments: (id)               => apiClient.get(`/tasks/${id}/attachments/`),
+  uploadAttachment: (id, formData, onUploadProgress) => apiClient.post(`/tasks/${id}/attachments/`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    onUploadProgress,
+  }),
+  downloadAttachment: (taskId, attachmentId) => apiClient.get(`/tasks/${taskId}/attachments/${attachmentId}/`, { responseType: 'blob' }),
+  deleteAttachment: (taskId, attachmentId) => apiClient.delete(`/tasks/${taskId}/attachments/${attachmentId}/`),
+  savedViews: () => apiClient.get('/saved-views/'),
+  createSavedView: (data) => apiClient.post('/saved-views/', data),
+  updateSavedView: (id, data) => apiClient.patch(`/saved-views/${id}/`, data),
+  deleteSavedView: (id) => apiClient.delete(`/saved-views/${id}/`),
 };
 
 // ─── Communication ────────────────────────────────────────────────

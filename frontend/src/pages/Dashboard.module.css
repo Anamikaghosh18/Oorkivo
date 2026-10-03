@@ -63,7 +63,7 @@
   gap: var(--space-3);
   margin-bottom: var(--space-5);
   padding: var(--space-3) var(--space-4);
-  border: 1px solid #e8c0c0;
+  border: 1px solid var(--color-rose);
   border-radius: var(--radius-base);
   background: var(--color-danger-bg);
   color: var(--color-danger);
@@ -118,13 +118,17 @@
   line-height: 1;
 }
 
+.overviewMetric:nth-child(1) strong { color: var(--color-info); }
+.overviewMetric:nth-child(2) strong { color: var(--color-warning); }
+.overviewMetric:nth-child(4) strong { color: var(--color-success); }
+
 .overviewMetric span {
   color: var(--color-text-secondary);
   font-size: var(--font-size-sm);
 }
 
 .metricAttention strong {
-  color: #986e5d;
+  color: var(--color-danger);
 }
 
 .dataNotice {
@@ -195,16 +199,16 @@
   height: 38px;
   flex: 0 0 auto;
   border-radius: 50%;
-  color: #fffdf8;
+  color: var(--color-clay);
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.04em;
 }
 
-.markClay { background: #9f7664; }
-.markSage { background: #64745f; }
-.markSand { background: #947f62; }
-.markSlate { background: #657376; }
+.markClay { background: var(--color-clay-bg); color: var(--color-clay); }
+.markSage { background: var(--color-sage-light); color: var(--color-sage-dark); }
+.markSand { background: var(--color-amber-bg); color: var(--color-amber); }
+.markSlate { background: var(--color-slate-bg); color: var(--color-slate); }
 
 .projectMain {
   flex: 1;
@@ -385,7 +389,7 @@
 }
 
 .sectionIcon {
-  color: var(--color-clay);
+  color: var(--color-info);
 }
 
 .upcomingList {
@@ -411,7 +415,7 @@
 
 .deadlineDate {
   min-width: 66px;
-  color: var(--color-clay);
+  color: var(--color-warning);
   font-size: var(--font-size-xs);
   font-weight: 700;
 }

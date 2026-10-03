@@ -1,6 +1,22 @@
 import { useEffect, useMemo, useState } from 'react';
-import { NavLink } from 'react-router-dom';
-import { CalendarDays, CheckCircle2, CircleDot, Search, ListTodo } from 'lucide-react';
+import { NavLink, useNavigate } from 'react-router-dom';
+import {
+  ArrowLeft,
+  Bookmark,
+  CalendarDays,
+  CheckCircle2,
+  ChevronRight,
+  CircleDot,
+  Columns3,
+  FolderKanban,
+  ListTodo,
+  Plus,
+  Rows3,
+  Search,
+  SlidersHorizontal,
+  Trash2,
+  UserRound,
+} from 'lucide-react';
 import AppShell from '../components/layout/AppShell';
 import DropdownSelect from '../components/DropdownSelect';
 import { useDashboard } from '../hooks/useDashboard';
@@ -8,10 +24,11 @@ import { projectsApi, tasksApi } from '../services/api';
 import styles from './Tasks.module.css';
 
 const STATUS_META = {
+  BACKLOG: { label: 'Backlog', className: 'backlog' },
   TODO: { label: 'To do', className: 'todo' },
   IN_PROGRESS: { label: 'In progress', className: 'inProgress' },
   IN_REVIEW: { label: 'In review', className: 'inReview' },
-  COMPLETED: { label: 'Completed', className: 'completed' },
+  COMPLETED: { label: 'Done', className: 'completed' },
   BLOCKED: { label: 'Blocked', className: 'blocked' },
 };
 
@@ -22,26 +39,28 @@ const PRIORITY_META = {
   LOW: { label: 'Low', className: 'low' },
 };
 
+const BOARD_STATUSES = ['BACKLOG', 'TODO', 'IN_PROGRESS', 'IN_REVIEW', 'COMPLETED', 'BLOCKED'];
+const TASK_VIEWS = [
+  ['MY_WORK', 'My Work'],
+  ['SPRINTS', 'Sprint'],
+  ['BACKLOG', 'Backlog'],
+];
+
 function getRows(data) {
   const rows = data?.results ?? data;
   return Array.isArray(rows) ? rows : [];
 }
 
-function getErrorMessage(error) {
-  const detail = error.response?.data?.detail;
-  return typeof detail === 'string'
-    ? detail
-    : 'Could not load tasks for one or more projects.';
+function getErrorMessage(error, fallback = 'The request could not be completed.') {
+  const detail = error?.response?.data?.detail;
+  return typeof detail === 'string' ? detail : fallback;
 }
 
-function formatDate(value) {
+function formatDate(value, options = { month: 'short', day: 'numeric' }) {
   if (!value) return 'No due date';
   const [year, month, day] = value.split('-').map(Number);
   if (!year || !month || !day) return value;
-  return new Date(year, month - 1, day).toLocaleDateString('en', {
-    month: 'short',
-    day: 'numeric',
-  });
+  return new Date(year, month - 1, day).toLocaleDateString('en', options);
 }
 
 function isOverdue(task) {
@@ -52,74 +71,243 @@ function isOverdue(task) {
   return due < today;
 }
 
-function StatusBadge({ value }) {
-  const meta = STATUS_META[value] ?? { label: value || 'Unknown', className: 'todo' };
-  return <span className={`${styles.badge} ${styles[meta.className]}`}>{meta.label}</span>;
+function isDueToday(task) {
+  if (!task.due_date || task.status === 'COMPLETED') return false;
+  const today = new Date();
+  const due = new Date(`${task.due_date}T00:00:00`);
+  return due.toDateString() === today.toDateString();
 }
 
-function PriorityBadge({ value }) {
-  const meta = PRIORITY_META[value] ?? { label: value || 'Unknown', className: 'medium' };
-  return <span className={`${styles.priority} ${styles[meta.className]}`}>{meta.label}</span>;
+function isDueSoon(task) {
+  if (!task.due_date || task.status === 'COMPLETED' || isOverdue(task)) return false;
+  if (isDueToday(task)) return true;
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  return new Date(`${task.due_date}T00:00:00`).toDateString() === tomorrow.toDateString();
+}
+
+function isUpcoming(task) {
+  return Boolean(task.due_date)
+    && task.status !== 'COMPLETED'
+    && !isOverdue(task)
+    && !isDueToday(task);
+}
+
+function dueLabel(task) {
+  if (!task.due_date) return 'No due date';
+  if (task.status === 'COMPLETED') return `Due ${formatDate(task.due_date)}`;
+  if (isOverdue(task)) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const days = Math.round((new Date(`${task.due_date}T00:00:00`) - today) / 86400000);
+    return `${Math.abs(days)}d overdue`;
+  }
+  if (isDueToday(task)) return 'Due today';
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  if (new Date(`${task.due_date}T00:00:00`).toDateString() === tomorrow.toDateString()) return 'Due tomorrow';
+  return `Due ${formatDate(task.due_date)}`;
+}
+
+function fullName(person) {
+  return [person?.first_name, person?.last_name].filter(Boolean).join(' ').trim()
+    || person?.email
+    || 'Unassigned';
+}
+
+function initials(person) {
+  if (!person) return '—';
+  const name = fullName(person);
+  return name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase();
+}
+
+function StatusLabel({ value }) {
+  const meta = STATUS_META[value] ?? { label: value || 'Unknown', className: 'todo' };
+  return <span className={`${styles.statusLabel} ${styles[meta.className]}`}>{meta.label}</span>;
+}
+
+function PriorityLabel({ value }) {
+  const meta = PRIORITY_META[value] ?? { label: value || 'Medium', className: 'medium' };
+  return <span className={`${styles.priorityLabel} ${styles[meta.className]}`}><i />{meta.label}</span>;
+}
+
+function TaskLink({ task, children, className }) {
+  return <NavLink to={`/tasks/${task.id}`} className={className}>{children}</NavLink>;
+}
+
+function EmptyState({ title, detail }) {
+  return (
+    <div className={styles.emptyState}>
+      <ListTodo size={20} aria-hidden="true" />
+      <strong>{title}</strong>
+      <span>{detail}</span>
+    </div>
+  );
 }
 
 export default function Tasks() {
   const { user, org } = useDashboard();
+  const navigate = useNavigate();
   const [tasks, setTasks] = useState([]);
+  const [projects, setProjects] = useState([]);
+  const [sprints, setSprints] = useState([]);
+  const [projectMembers, setProjectMembers] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [actionError, setActionError] = useState('');
+  const [permissionWarning, setPermissionWarning] = useState(false);
+  const [workspaceView, setWorkspaceView] = useState('MY_WORK');
+  const [layoutView, setLayoutView] = useState('LIST');
+  const [myWorkFilter, setMyWorkFilter] = useState('ACTIVE');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [priorityFilter, setPriorityFilter] = useState('ALL');
+  const [projectFilter, setProjectFilter] = useState('ALL');
+  const [sprintFilter, setSprintFilter] = useState('ALL');
+  const [assigneeFilter, setAssigneeFilter] = useState('ALL');
+  const [dueFilter, setDueFilter] = useState('ALL');
+  const [quickView, setQuickView] = useState('ALL');
+  const [sortBy, setSortBy] = useState('DUE_DATE');
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [draggingTaskId, setDraggingTaskId] = useState(null);
+  const [dragTargetStatus, setDragTargetStatus] = useState('');
+  const [savedViews, setSavedViews] = useState([]);
+  const [savedViewName, setSavedViewName] = useState('');
+  const [savedViewError, setSavedViewError] = useState('');
+  const [savedViewsLoading, setSavedViewsLoading] = useState(false);
+  const [backlogSearch, setBacklogSearch] = useState('');
+  const [backlogPriority, setBacklogPriority] = useState('ALL');
+  const [backlogAssignee, setBacklogAssignee] = useState('ALL');
+  const [backlogSort, setBacklogSort] = useState('PRIORITY');
+  const [selectedSprintId, setSelectedSprintId] = useState(null);
+  const [sprintActionError, setSprintActionError] = useState('');
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createSaving, setCreateSaving] = useState(false);
+  const [createError, setCreateError] = useState('');
+  const [newTask, setNewTask] = useState({
+    projectId: '',
+    title: '',
+    description: '',
+    priority: 'MEDIUM',
+    due_date: '',
+  });
 
   useEffect(() => {
     let active = true;
 
-    async function loadTasks() {
+    async function loadWorkspace() {
       setLoading(true);
       setError('');
       try {
         const projectsResponse = await projectsApi.list();
-        const projects = getRows(projectsResponse.data);
-        const results = await Promise.allSettled(
-          projects.map(async (project) => {
+        const loadedProjects = getRows(projectsResponse.data);
+        if (!active) return;
+        setProjects(loadedProjects);
+
+        const [taskResults, sprintResults, memberResults] = await Promise.all([
+          Promise.allSettled(loadedProjects.map(async (project) => {
             const response = await tasksApi.list(project.id);
             return getRows(response.data).map((task) => ({
               ...task,
               project: task.project ?? { id: project.id, name: project.name },
             }));
-          })
-        );
+          })),
+          Promise.allSettled(loadedProjects.map((project) => projectsApi.sprints(project.id))),
+          Promise.allSettled(loadedProjects.map((project) => projectsApi.members(project.id))),
+        ]);
         if (!active) return;
 
         const loadedTasks = [];
-        const failures = [];
-        results.forEach((result, index) => {
-          if (result.status === 'fulfilled') {
-            loadedTasks.push(...result.value);
-          } else {
-            failures.push(projects[index]?.name ?? 'A project');
-          }
+        const failedProjects = [];
+        taskResults.forEach((result, index) => {
+          if (result.status === 'fulfilled') loadedTasks.push(...result.value);
+          else failedProjects.push(loadedProjects[index]?.name ?? 'A project');
         });
         setTasks(loadedTasks);
-        if (failures.length) {
-          setError(`Could not load tasks from: ${failures.join(', ')}.`);
-        }
+        setSprints(sprintResults.flatMap((result, index) => result.status === 'fulfilled'
+          ? getRows(result.value.data).map((sprint) => ({
+            ...sprint,
+            project: loadedProjects[index] ? { id: loadedProjects[index].id, name: loadedProjects[index].name } : null,
+          }))
+          : []));
+        const memberMap = {};
+        let membersUnavailable = false;
+        memberResults.forEach((result, index) => {
+          if (result.status === 'fulfilled') memberMap[String(loadedProjects[index].id)] = getRows(result.value.data);
+          else membersUnavailable = true;
+        });
+        setProjectMembers(memberMap);
+        setPermissionWarning(membersUnavailable);
+        if (failedProjects.length) setError(`Could not load tasks from: ${failedProjects.join(', ')}.`);
       } catch (loadError) {
-        if (active) setError(getErrorMessage(loadError));
+        if (active) setError(getErrorMessage(loadError, 'Could not load tasks for your projects.'));
       } finally {
         if (active) setLoading(false);
       }
     }
 
-    loadTasks();
-    return () => {
-      active = false;
-    };
+    loadWorkspace();
+    return () => { active = false; };
   }, []);
+
+  useEffect(() => {
+    let active = true;
+    tasksApi.savedViews().then((response) => {
+      if (active) setSavedViews(getRows(response.data));
+    }).catch(() => {
+      if (active) setSavedViewError('Saved views could not be loaded.');
+    });
+    return () => { active = false; };
+  }, []);
+
+  const canManageProject = (projectId) => (
+    ['OWNER', 'ADMIN'].includes(org?.access_level)
+    || (projectMembers[String(projectId)] ?? []).some((membership) =>
+      String(membership.user?.id) === String(user?.id) && membership.role === 'MANAGER')
+  );
+  const canManageTask = (task) => canManageProject(task.project?.id);
+  const canEditTask = (task) => canManageTask(task)
+    || String(task.assigned_to?.id) === String(user?.id);
+  const manageableProjects = projects.filter((project) => canManageProject(project.id));
+
+  useEffect(() => {
+    if (!newTask.projectId && manageableProjects.length) {
+      setNewTask((current) => ({ ...current, projectId: String(manageableProjects[0].id) }));
+    }
+  }, [manageableProjects.length]);
+
+  const myTasks = tasks;
+  const myActiveTasks = myTasks.filter((task) => task.status !== 'COMPLETED');
+  const myDueToday = myActiveTasks.filter(isDueToday);
+  const myOverdue = myActiveTasks.filter(isOverdue);
+  const completedCount = myTasks.filter((task) => task.status === 'COMPLETED').length;
 
   const filteredTasks = useMemo(() => {
     const query = search.trim().toLocaleLowerCase();
-    return tasks.filter((task) => {
+    const result = tasks.filter((task) => {
+      const mine = String(task.assigned_to?.id) === String(user?.id);
+      const matchesQuickView = quickView === 'ALL'
+        || (quickView === 'MY_TASKS' && mine)
+        || (quickView === 'TODAY' && isDueToday(task))
+        || (quickView === 'UPCOMING' && isUpcoming(task))
+        || (quickView === 'OVERDUE' && isOverdue(task))
+        || (quickView === 'HIGH_PRIORITY' && ['HIGH', 'URGENT'].includes(task.priority))
+        || (quickView === 'CURRENT_SPRINT' && task.sprint?.status === 'ACTIVE')
+        || (quickView === 'BLOCKED' && task.status === 'BLOCKED');
       const matchesStatus = statusFilter === 'ALL' || task.status === statusFilter;
+      const matchesPriority = priorityFilter === 'ALL' || task.priority === priorityFilter;
+      const matchesProject = projectFilter === 'ALL' || String(task.project?.id) === projectFilter;
+      const matchesSprint = sprintFilter === 'ALL'
+        || (sprintFilter === 'BACKLOG' ? !task.sprint : String(task.sprint?.id) === sprintFilter);
+      const matchesAssignee = assigneeFilter === 'ALL'
+        || (assigneeFilter === 'UNASSIGNED' && !task.assigned_to)
+        || (assigneeFilter === 'ME' && mine)
+        || String(task.assigned_to?.id) === assigneeFilter;
+      const matchesDue = dueFilter === 'ALL'
+        || (dueFilter === 'TODAY' && isDueToday(task))
+        || (dueFilter === 'UPCOMING' && isUpcoming(task))
+        || (dueFilter === 'OVERDUE' && isOverdue(task))
+        || (dueFilter === 'NONE' && !task.due_date);
       const matchesQuery = !query || [
         task.title,
         task.description,
@@ -127,115 +315,633 @@ export default function Tasks() {
         task.assigned_to?.first_name,
         task.assigned_to?.last_name,
       ].some((value) => value?.toLocaleLowerCase().includes(query));
-      return matchesStatus && matchesQuery;
+      return matchesQuickView && matchesStatus && matchesPriority && matchesProject
+        && matchesSprint && matchesAssignee && matchesDue && matchesQuery;
     });
-  }, [tasks, search, statusFilter]);
+    const priorityOrder = { URGENT: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
+    return [...result].sort((a, b) => {
+      if (sortBy === 'TITLE') return a.title.localeCompare(b.title);
+      if (sortBy === 'PRIORITY') return (priorityOrder[a.priority] ?? 4) - (priorityOrder[b.priority] ?? 4);
+      if (sortBy === 'STATUS') return (BOARD_STATUSES.indexOf(a.status) - BOARD_STATUSES.indexOf(b.status));
+      return (a.due_date || '9999-12-31').localeCompare(b.due_date || '9999-12-31');
+    });
+  }, [tasks, search, statusFilter, priorityFilter, projectFilter, sprintFilter, assigneeFilter, dueFilter, quickView, sortBy, user?.id]);
 
-  const completedCount = tasks.filter((task) => task.status === 'COMPLETED').length;
-  const overdueCount = tasks.filter(isOverdue).length;
-  const assignedCount = tasks.filter((task) => task.assigned_to?.id === user?.id).length;
+  const visibleMyTasks = useMemo(() => {
+    const filtered = filteredTasks;
+    if (myWorkFilter === 'TODAY') return filtered.filter(isDueToday);
+    if (myWorkFilter === 'UPCOMING') return filtered.filter(isUpcoming);
+    if (myWorkFilter === 'OVERDUE') return filtered.filter(isOverdue);
+    if (myWorkFilter === 'COMPLETED') return filtered.filter((task) => task.status === 'COMPLETED');
+    return filtered.filter((task) => task.status !== 'COMPLETED');
+  }, [myTasks, myActiveTasks, myWorkFilter, filteredTasks]);
 
-  return (
-    <AppShell org={org} user={user}>
-      <div className={styles.page}>
-        <header className={styles.pageHeader}>
-          <div className={styles.titleGroup}>
-            <span className={styles.eyebrow}>Work management</span>
-            <h1 className={styles.title}>Tasks</h1>
-            <p className={styles.subtitle}>Track work and priorities across your projects.</p>
+  const backlogTasks = useMemo(() => {
+    const query = backlogSearch.trim().toLocaleLowerCase();
+    const priorityOrder = { URGENT: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
+    return tasks.filter((task) => !task.sprint)
+      .filter((task) => backlogPriority === 'ALL' || task.priority === backlogPriority)
+      .filter((task) => backlogAssignee === 'ALL'
+        || (backlogAssignee === 'UNASSIGNED' && !task.assigned_to)
+        || (backlogAssignee === 'ME' && String(task.assigned_to?.id) === String(user?.id))
+        || String(task.assigned_to?.id) === backlogAssignee)
+      .filter((task) => !query || `${task.title} ${task.project?.name ?? ''} ${fullName(task.assigned_to)}`.toLocaleLowerCase().includes(query))
+      .sort((a, b) => {
+        if (backlogSort === 'TITLE') return a.title.localeCompare(b.title);
+        if (backlogSort === 'DUE_DATE') return (a.due_date || '9999-12-31').localeCompare(b.due_date || '9999-12-31');
+        return (priorityOrder[a.priority] ?? 4) - (priorityOrder[b.priority] ?? 4);
+      });
+  }, [tasks, backlogSearch, backlogPriority, backlogAssignee, backlogSort, user?.id]);
+
+  const selectedSprint = sprints.find((sprint) => String(sprint.id) === String(selectedSprintId));
+  const selectedSprintTasks = selectedSprint
+    ? tasks.filter((task) => String(task.sprint?.id) === String(selectedSprint.id))
+    : [];
+  const assigneeOptions = useMemo(() => Array.from(new Map(
+    tasks.filter((task) => task.assigned_to).map((task) => [
+      String(task.assigned_to.id),
+      { value: String(task.assigned_to.id), label: fullName(task.assigned_to) },
+    ]),
+  ).values()), [tasks]);
+
+  const applySavedView = (savedView) => {
+    const filters = savedView.filters || {};
+    setWorkspaceView('LIST');
+    setQuickView(filters.quick_view || 'ALL');
+    setStatusFilter(filters.status?.length === 1 ? filters.status[0] : 'ALL');
+    setPriorityFilter(filters.priority?.length === 1 ? filters.priority[0] : 'ALL');
+    setProjectFilter(filters.project ? String(filters.project) : 'ALL');
+    setSprintFilter(filters.sprint ? String(filters.sprint) : 'ALL');
+    setAssigneeFilter(filters.assignee === 'me' ? 'ME' : filters.assignee ? String(filters.assignee) : 'ALL');
+    setDueFilter(filters.due_date?.toUpperCase() ?? 'ALL');
+  };
+
+  const handleSaveView = async (event) => {
+    event.preventDefault();
+    if (!savedViewName.trim()) return;
+    setSavedViewError('');
+    setSavedViewsLoading(true);
+    const filters = {};
+    if (statusFilter !== 'ALL') filters.status = [statusFilter];
+    if (priorityFilter !== 'ALL') filters.priority = [priorityFilter];
+    if (projectFilter !== 'ALL') filters.project = Number(projectFilter);
+    if (sprintFilter !== 'ALL' && sprintFilter !== 'BACKLOG') filters.sprint = Number(sprintFilter);
+    if (assigneeFilter === 'ME') filters.assignee = 'me';
+    else if (assigneeFilter !== 'ALL' && assigneeFilter !== 'UNASSIGNED') filters.assignee = Number(assigneeFilter);
+    if (dueFilter !== 'ALL') filters.due_date = dueFilter.toLowerCase();
+    if (quickView !== 'ALL') filters.quick_view = quickView;
+    try {
+      const response = await tasksApi.createSavedView({ name: savedViewName.trim(), filters });
+      setSavedViews((current) => [...current, response.data]);
+      setSavedViewName('');
+    } catch (saveError) {
+      setSavedViewError(getErrorMessage(saveError, 'Could not save this view.'));
+    } finally {
+      setSavedViewsLoading(false);
+    }
+  };
+
+  const handleDeleteSavedView = async (savedViewId) => {
+    setSavedViewError('');
+    try {
+      await tasksApi.deleteSavedView(savedViewId);
+      setSavedViews((current) => current.filter((savedView) => savedView.id !== savedViewId));
+    } catch (deleteError) {
+      setSavedViewError(getErrorMessage(deleteError, 'Could not delete this view.'));
+    }
+  };
+
+  const updateTask = async (task, payload) => {
+    setActionError('');
+    try {
+      const response = await tasksApi.update(task.id, payload);
+      setTasks((current) => current.map((item) => item.id === task.id
+        ? { ...response.data, project: response.data.project ?? task.project }
+        : item));
+      return true;
+    } catch (updateError) {
+      setActionError(getErrorMessage(updateError, 'Could not update this task.'));
+      return false;
+    }
+  };
+
+  const changeSprintStatus = async (sprint, action) => {
+    setSprintActionError('');
+    try {
+      const response = action === 'start'
+        ? await projectsApi.startSprint(sprint.project.id, sprint.id)
+        : await projectsApi.completeSprint(sprint.project.id, sprint.id);
+      setSprints((current) => current.map((item) => item.id === sprint.id ? { ...item, ...response.data } : item));
+    } catch (statusError) {
+      setSprintActionError(getErrorMessage(statusError, 'Sprint status could not be changed. Check that no other sprint is active.'));
+    }
+  };
+
+  const handleCreateTask = async (event) => {
+    event.preventDefault();
+    const project = projects.find((item) => String(item.id) === newTask.projectId);
+    if (!project || !canManageProject(project.id) || !newTask.title.trim()) return;
+    setCreateSaving(true);
+    setCreateError('');
+    try {
+      const response = await tasksApi.create(project.id, {
+        title: newTask.title.trim(),
+        description: newTask.description.trim(),
+        status: 'TODO',
+        priority: newTask.priority,
+        due_date: newTask.due_date || null,
+      });
+      setTasks((current) => [{ ...response.data, project: response.data.project ?? { id: project.id, name: project.name } }, ...current]);
+      setCreateOpen(false);
+      setNewTask((current) => ({ ...current, title: '', description: '', priority: 'MEDIUM', due_date: '' }));
+    } catch (createErrorValue) {
+      setCreateError(getErrorMessage(createErrorValue, 'Could not create this task. Check your project access and try again.'));
+    } finally {
+      setCreateSaving(false);
+    }
+  };
+
+  const renderTaskFilters = () => (
+    <>
+      <div className={`${styles.filterControls} ${filtersOpen ? styles.filterControlsOpen : ''}`}>
+        <DropdownSelect
+          variant="compact"
+          prefix="Status"
+          value={statusFilter}
+          ariaLabel="Filter tasks by status"
+          options={[{ value: 'ALL', label: 'All statuses' }, ...Object.entries(STATUS_META).map(([value, meta]) => ({ value, label: meta.label }))]}
+          onChange={setStatusFilter}
+        />
+        <DropdownSelect
+          variant="compact"
+          prefix="Priority"
+          value={priorityFilter}
+          ariaLabel="Filter tasks by priority"
+          options={[{ value: 'ALL', label: 'All priorities' }, ...Object.entries(PRIORITY_META).map(([value, meta]) => ({ value, label: meta.label }))]}
+          onChange={setPriorityFilter}
+        />
+        <DropdownSelect
+          variant="compact"
+          prefix="Project"
+          value={projectFilter}
+          ariaLabel="Filter tasks by project"
+          options={[{ value: 'ALL', label: 'All projects' }, ...projects.map((project) => ({ value: String(project.id), label: project.name }))]}
+          onChange={setProjectFilter}
+        />
+        <DropdownSelect
+          variant="compact"
+          prefix="Sprint"
+          value={sprintFilter}
+          ariaLabel="Filter tasks by sprint"
+          options={[{ value: 'ALL', label: 'All sprints' }, { value: 'BACKLOG', label: 'Backlog' }, ...sprints.map((sprint) => ({ value: String(sprint.id), label: `${sprint.name} · ${sprint.project?.name ?? 'Project'}` }))]}
+          onChange={setSprintFilter}
+        />
+        <DropdownSelect
+          variant="compact"
+          prefix="Assignee"
+          value={assigneeFilter}
+          ariaLabel="Filter tasks by assignee"
+          options={[{ value: 'ALL', label: 'Anyone' }, { value: 'ME', label: 'Assigned to me' }, { value: 'UNASSIGNED', label: 'Unassigned' }, ...assigneeOptions]}
+          onChange={setAssigneeFilter}
+        />
+        <DropdownSelect
+          variant="compact"
+          prefix="Due"
+          value={dueFilter}
+          ariaLabel="Filter tasks by due date"
+          options={[
+            { value: 'ALL', label: 'Any due date' },
+            { value: 'TODAY', label: 'Due today' },
+            { value: 'UPCOMING', label: 'Upcoming' },
+            { value: 'OVERDUE', label: 'Overdue' },
+            { value: 'NONE', label: 'No due date' },
+          ]}
+          onChange={setDueFilter}
+        />
+        <DropdownSelect
+          variant="compact"
+          prefix="Sort"
+          value={sortBy}
+          ariaLabel="Sort tasks"
+          options={[
+            { value: 'DUE_DATE', label: 'Due date' },
+            { value: 'PRIORITY', label: 'Priority' },
+            { value: 'TITLE', label: 'Title' },
+            { value: 'STATUS', label: 'Status' },
+          ]}
+          onChange={setSortBy}
+        />
+      </div>
+      <button type="button" className={styles.mobileFiltersButton} onClick={() => setFiltersOpen((open) => !open)} aria-expanded={filtersOpen}>
+        <SlidersHorizontal size={15} /> Filters
+      </button>
+    </>
+  );
+
+  const renderCompactStatus = (task) => (
+    <select
+      className={styles.quickStatus}
+      value={task.status}
+      aria-label={`Change status for ${task.title}`}
+      disabled={!canEditTask(task)}
+      onClick={(event) => event.stopPropagation()}
+      onChange={(event) => updateTask(task, { status: event.target.value })}
+    >
+      {Object.entries(STATUS_META).map(([value, meta]) => <option key={value} value={value}>{meta.label}</option>)}
+    </select>
+  );
+
+  const renderWorkRow = (task) => (
+    <article className={styles.workRow} key={task.id}>
+      <TaskLink task={task} className={styles.workTaskTitle}>{task.title}</TaskLink>
+      <div className={styles.workTaskMeta}>
+        <StatusLabel value={task.status} />
+        <PriorityLabel value={task.priority} />
+        <span className={styles.workContext}>{task.project?.name ?? 'Project'}{task.sprint?.name ? ` · ${task.sprint.name}` : ''}</span>
+        <span className={`${styles.workDue} ${isOverdue(task) ? styles.overdueText : isDueSoon(task) ? styles.dueSoon : ''}`}>{dueLabel(task)}</span>
+      </div>
+    </article>
+  );
+
+  const renderLayoutToggle = () => (
+    <div className={styles.viewToggle} aria-label="Task layout">
+      <button type="button" className={layoutView === 'LIST' ? styles.viewActive : ''} onClick={() => setLayoutView('LIST')} aria-pressed={layoutView === 'LIST'}><Rows3 size={14} /> List</button>
+      <button type="button" className={layoutView === 'BOARD' ? styles.viewActive : ''} onClick={() => setLayoutView('BOARD')} aria-pressed={layoutView === 'BOARD'}><Columns3 size={14} /> Board</button>
+    </div>
+  );
+
+  const renderMyWork = () => {
+    const groups = myWorkFilter === 'ACTIVE'
+      ? [
+        { title: 'TODAY', items: visibleMyTasks.filter(isDueToday) },
+        { title: 'OVERDUE', items: visibleMyTasks.filter(isOverdue) },
+        { title: 'UPCOMING', items: visibleMyTasks.filter(isUpcoming) },
+        { title: 'IN PROGRESS', items: visibleMyTasks.filter((task) => task.status === 'IN_PROGRESS' && !task.due_date) },
+        { title: 'NO DUE DATE', items: visibleMyTasks.filter((task) => !task.due_date && task.status !== 'IN_PROGRESS') },
+      ]
+      : [{ title: myWorkFilter === 'COMPLETED' ? 'COMPLETED' : myWorkFilter, items: visibleMyTasks }];
+    const nonEmptyGroups = groups.map((group) => ({
+      ...group,
+      items: [...group.items].sort((a, b) => (a.due_date || '9999-12-31').localeCompare(b.due_date || '9999-12-31')),
+    })).filter((group) => group.items.length);
+    return (
+      <>
+        <header className={styles.workHeader}>
+          <div>
+            <h2>My Work</h2>
+            <p>{loading ? 'Loading your work…' : `${myActiveTasks.length} active tasks · ${myDueToday.length} due today · ${myOverdue.length} overdue`}</p>
           </div>
-          <div className={styles.taskCount}>
-            <ListTodo size={16} />
-            {loading ? 'Loading' : `${tasks.length} ${tasks.length === 1 ? 'task' : 'tasks'}`}
-          </div>
+          <span className={styles.quietCompleted}>{completedCount} completed</span>
         </header>
-
-        <section className={styles.metrics} aria-label="Task summary">
-          <div className={styles.metric}>
-            <span className={styles.metricLabel}>Assigned to me</span>
-            <strong>{loading ? '—' : assignedCount}</strong>
-          </div>
-          <div className={styles.metric}>
-            <span className={styles.metricLabel}>Completed</span>
-            <strong>{loading ? '—' : completedCount}</strong>
-          </div>
-          <div className={styles.metric}>
-            <span className={styles.metricLabel}>Overdue</span>
-            <strong className={overdueCount ? styles.overdueValue : ''}>{loading ? '—' : overdueCount}</strong>
-          </div>
-        </section>
-
+        <nav className={styles.myWorkFilters} aria-label="Filter my work">
+          {[
+            ['ACTIVE', 'All active'],
+            ['TODAY', 'Today'],
+            ['UPCOMING', 'Upcoming'],
+            ['OVERDUE', 'Overdue'],
+            ['COMPLETED', 'Completed'],
+          ].map(([value, label]) => (
+            <button type="button" key={value} className={myWorkFilter === value ? styles.myWorkFilterActive : ''} onClick={() => setMyWorkFilter(value)} aria-pressed={myWorkFilter === value}>
+              {label}
+              {value === 'TODAY' && <span>{myDueToday.length}</span>}
+              {value === 'OVERDUE' && <span>{myOverdue.length}</span>}
+            </button>
+          ))}
+        </nav>
         <div className={styles.toolbar}>
           <label className={styles.searchBox}>
             <Search size={15} />
-            <input
-              type="search"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search tasks or projects"
-              aria-label="Search tasks or projects"
-            />
+            <input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search tasks" aria-label="Search tasks" />
           </label>
-          <DropdownSelect
-            variant="compact"
-            prefix="Status"
-            value={statusFilter}
-            ariaLabel="Filter tasks by status"
-            options={[
-              { value: 'ALL', label: 'All statuses' },
-              ...Object.entries(STATUS_META).map(([value, meta]) => ({ value, label: meta.label })),
-            ]}
-            onChange={setStatusFilter}
-          />
+          {renderLayoutToggle()}
         </div>
+        <details className={styles.advancedFilters}>
+          <summary><SlidersHorizontal size={14} /> More filters</summary>
+          {renderTaskFilters()}
+        </details>
+        {(savedViews.length > 0 || savedViewError) && (
+          <details className={styles.savedViews}>
+            <summary><Bookmark size={14} /> Saved views{savedViews.length > 0 && <span>{savedViews.length}</span>}</summary>
+            <div className={styles.savedViewContent}>
+              {savedViews.map((savedView) => (
+                <div className={styles.savedViewItem} key={savedView.id}>
+                  <button type="button" onClick={() => applySavedView(savedView)}>{savedView.name}</button>
+                  <button type="button" aria-label={`Delete ${savedView.name}`} onClick={() => handleDeleteSavedView(savedView.id)}><Trash2 size={13} /></button>
+                </div>
+              ))}
+              <form className={styles.saveViewForm} onSubmit={handleSaveView}>
+                <input value={savedViewName} onChange={(event) => setSavedViewName(event.target.value)} placeholder="Name this view" maxLength={100} aria-label="Saved view name" />
+                <button type="submit" disabled={savedViewsLoading || !savedViewName.trim()}><Bookmark size={13} /> Save current filters</button>
+              </form>
+              {savedViewError && <p className={styles.inlineError} role="alert">{savedViewError}</p>}
+            </div>
+          </details>
+        )}
+        {loading ? <div className={styles.stateMessage}>Loading tasks…</div> : visibleMyTasks.length
+          ? layoutView === 'BOARD'
+            ? renderBoard(visibleMyTasks)
+            : myWorkFilter === 'ACTIVE' && !search.trim() && statusFilter === 'ALL' && priorityFilter === 'ALL' && projectFilter === 'ALL' && sprintFilter === 'ALL' && assigneeFilter === 'ALL' && dueFilter === 'ALL'
+              ? <div className={styles.workGroups}>{nonEmptyGroups.map((group) => (
+                <section className={styles.workGroup} key={group.title}>
+                  <h3>{group.title}<span>{group.items.length}</span></h3>
+                  {group.items.map(renderWorkRow)}
+                </section>
+              ))}</div>
+              : renderList(visibleMyTasks)
+          : <EmptyState title={myWorkFilter === 'COMPLETED' ? 'No completed tasks yet' : 'No tasks found'} detail={myWorkFilter === 'ACTIVE' ? 'Tasks across your projects will appear here.' : 'No tasks match this view right now.'} />}
+        {!loading && <p className={styles.resultCount}>Showing {visibleMyTasks.length} of {tasks.length} tasks</p>}
+      </>
+    );
+  };
+
+  const renderBoard = (boardTasks = filteredTasks, showBacklogSprintMove = false, showSprintBacklogMove = false) => (
+    <div className={styles.board} aria-label="Task board">
+      {BOARD_STATUSES.map((status) => {
+        const meta = STATUS_META[status];
+        const columnTasks = boardTasks.filter((task) => task.status === status);
+        const isDropTarget = dragTargetStatus === status && draggingTaskId !== null;
+        return (
+          <section
+            className={`${styles.boardColumn} ${isDropTarget ? styles.boardColumnDropTarget : ''}`}
+            key={status}
+            onDragOver={(event) => { event.preventDefault(); setDragTargetStatus(status); }}
+            onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setDragTargetStatus(''); }}
+            onDrop={(event) => {
+              event.preventDefault();
+              const task = tasks.find((item) => String(item.id) === String(draggingTaskId));
+              if (task && task.status !== status && canEditTask(task)) updateTask(task, { status });
+              setDraggingTaskId(null);
+              setDragTargetStatus('');
+            }}
+          >
+            <h3><span className={`${styles.columnDot} ${styles[meta.className]}`} />{meta.label}<small>{columnTasks.length}</small></h3>
+            <div className={styles.boardCards}>
+              {columnTasks.map((task) => (
+                <article
+                  className={`${styles.boardTask} ${draggingTaskId === task.id ? styles.boardTaskDragging : ''}`}
+                  key={task.id}
+                  role="link"
+                  tabIndex={0}
+                  aria-label={`Open task ${task.title}`}
+                  onClick={(event) => {
+                    if (event.target.closest('a, button, select')) return;
+                    navigate(`/tasks/${task.id}`);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) {
+                      event.preventDefault();
+                      navigate(`/tasks/${task.id}`);
+                    }
+                  }}
+                  draggable={canEditTask(task)}
+                  onDragStart={(event) => {
+                    setDraggingTaskId(task.id);
+                    event.dataTransfer.effectAllowed = 'move';
+                    event.dataTransfer.setData('text/plain', String(task.id));
+                  }}
+                  onDragEnd={() => { setDraggingTaskId(null); setDragTargetStatus(''); }}
+                >
+                  <div className={styles.boardTaskTop}>
+                    <TaskLink task={task} className={styles.boardTaskTitle}>{task.title}</TaskLink>
+                    {renderCompactStatus(task)}
+                  </div>
+                  <div className={styles.boardTaskMeta}>
+                    <PriorityLabel value={task.priority} />
+                    <span className={styles.boardAssignee}>
+                      <span className={styles.avatar} aria-hidden="true">{task.assigned_to ? initials(task.assigned_to) : <UserRound size={13} />}</span>
+                      <span>{fullName(task.assigned_to)}</span>
+                    </span>
+                  </div>
+                  <span className={styles.boardProject}>{task.project?.name ?? 'Project'}</span>
+                  {task.due_date && <time className={isOverdue(task) ? styles.overdueText : isDueSoon(task) ? styles.dueSoon : ''}>{dueLabel(task)}</time>}
+                  {showBacklogSprintMove && canEditTask(task) && <select className={styles.sprintMove} value="" aria-label={`Move ${task.title} to sprint`} onClick={(event) => event.stopPropagation()} onChange={(event) => updateTask(task, { sprint_id: event.target.value ? Number(event.target.value) : null })}>
+                    <option value="">Move to sprint…</option>
+                    {sprints.filter((sprint) => String(sprint.project?.id) === String(task.project?.id) && sprint.status !== 'COMPLETED').map((sprint) => <option key={sprint.id} value={sprint.id}>{sprint.name}</option>)}
+                  </select>}
+                  {showSprintBacklogMove && canEditTask(task) && <button type="button" className={styles.textAction} onClick={() => updateTask(task, { sprint_id: null })}>Move to backlog</button>}
+                </article>
+              ))}
+              {!columnTasks.length && <p className={styles.boardEmpty}>Drop a task here</p>}
+            </div>
+          </section>
+        );
+      })}
+    </div>
+  );
+
+  const renderList = (listTasks = filteredTasks, showSprintBacklogMove = false) => (
+    <div className={styles.listPanel}>
+      <div className={`${styles.listRow} ${styles.listHeader}`} aria-hidden="true">
+        <span>Task</span><span>Status</span><span>Priority</span><span>Due</span>
+      </div>
+      {loading ? <div className={styles.stateMessage}>Loading tasks…</div> : listTasks.length
+        ? listTasks.map((task) => (
+          <div className={`${styles.listRow} ${showSprintBacklogMove ? styles.listRowWithAction : ''}`} key={task.id}>
+            <div className={styles.listTask}>
+              <CircleDot size={15} />
+              <div><TaskLink task={task} className={styles.listTaskTitle}>{task.title}</TaskLink><small>{task.project?.name ?? 'Project'}</small></div>
+            </div>
+            {renderCompactStatus(task)}
+            <PriorityLabel value={task.priority} />
+            <span className={`${styles.listDue} ${isOverdue(task) ? styles.overdueText : isDueSoon(task) ? styles.dueSoon : ''}`}>{dueLabel(task)}</span>
+            {showSprintBacklogMove && canEditTask(task) && <button type="button" className={styles.textAction} onClick={() => updateTask(task, { sprint_id: null })}>Move to backlog</button>}
+          </div>
+        ))
+        : <EmptyState title={tasks.length ? 'No tasks match these filters' : 'No tasks found'} detail="Try another search or adjust your filters." />}
+    </div>
+  );
+
+  const renderBacklog = () => {
+    const groups = ['URGENT', 'HIGH', 'MEDIUM', 'LOW'].map((priority) => ({
+      priority,
+      tasks: backlogTasks.filter((task) => task.priority === priority),
+    })).filter((group) => group.tasks.length);
+    return (
+      <>
+        <header className={styles.sectionHeader}>
+          <div><h2>Backlog</h2><p>{backlogTasks.length === tasks.filter((task) => !task.sprint).length
+            ? `${backlogTasks.length} unscheduled tasks`
+            : `${backlogTasks.length} of ${tasks.filter((task) => !task.sprint).length} unscheduled tasks`}</p></div>
+        </header>
+        <div className={styles.backlogToolbar}>
+          <label className={styles.searchBox}>
+            <Search size={15} />
+            <input type="search" value={backlogSearch} onChange={(event) => setBacklogSearch(event.target.value)} placeholder="Search backlog" aria-label="Search backlog" />
+          </label>
+          <DropdownSelect variant="compact" prefix="Priority" value={backlogPriority} ariaLabel="Filter backlog by priority" options={[{ value: 'ALL', label: 'All priorities' }, ...Object.entries(PRIORITY_META).map(([value, meta]) => ({ value, label: meta.label }))]} onChange={setBacklogPriority} />
+          <DropdownSelect variant="compact" prefix="Assignee" value={backlogAssignee} ariaLabel="Filter backlog by assignee" options={[{ value: 'ALL', label: 'Anyone' }, { value: 'ME', label: 'Assigned to me' }, { value: 'UNASSIGNED', label: 'Unassigned' }, ...assigneeOptions]} onChange={setBacklogAssignee} />
+          <DropdownSelect variant="compact" prefix="Sort" value={backlogSort} ariaLabel="Sort backlog tasks" options={[{ value: 'PRIORITY', label: 'Priority' }, { value: 'DUE_DATE', label: 'Due date' }, { value: 'TITLE', label: 'Title' }]} onChange={setBacklogSort} />
+          {renderLayoutToggle()}
+        </div>
+        {loading ? <div className={styles.stateMessage}>Loading backlog…</div> : backlogTasks.length ? layoutView === 'BOARD'
+          ? renderBoard(backlogTasks, true)
+          : (
+          <div className={styles.backlogGroups}>
+            {groups.map((group) => (
+              <section className={styles.backlogGroup} key={group.priority}>
+                <h3><PriorityLabel value={group.priority} /><span>{group.tasks.length}</span></h3>
+                {group.tasks.map((task) => {
+                  const eligibleSprints = sprints.filter((sprint) => String(sprint.project?.id) === String(task.project?.id) && sprint.status !== 'COMPLETED');
+                  return (
+                    <article className={styles.backlogRow} key={task.id}>
+                      <TaskLink task={task} className={styles.backlogTaskTitle}>{task.title}</TaskLink>
+                      <span className={styles.backlogMeta}>{task.project?.name ?? 'Project'} · {fullName(task.assigned_to)}</span>
+                      <span className={styles.backlogMeta}>{STATUS_META[task.status]?.label ?? task.status} · {dueLabel(task)}</span>
+                      {canEditTask(task) && <select className={styles.sprintMove} value="" aria-label={`Move ${task.title} to sprint`} onChange={(event) => updateTask(task, { sprint_id: event.target.value ? Number(event.target.value) : null })}>
+                        <option value="">Move to sprint…</option>
+                        {eligibleSprints.map((sprint) => <option key={sprint.id} value={sprint.id}>{sprint.name}</option>)}
+                      </select>}
+                    </article>
+                  );
+                })}
+              </section>
+            ))}
+          </div>
+        ) : <EmptyState title={tasks.some((task) => !task.sprint) ? 'No backlog tasks match these filters' : 'The backlog is clear'} detail="Tasks without a sprint will appear here." />}
+      </>
+    );
+  };
+
+  const renderSprintWorkspace = () => {
+    const sprintGroups = [
+      ['ACTIVE', 'CURRENT'],
+      ['PLANNED', 'UPCOMING'],
+      ['COMPLETED', 'COMPLETED'],
+    ];
+    if (selectedSprint) {
+      const canManage = canManageProject(selectedSprint.project?.id);
+      const completed = selectedSprintTasks.filter((task) => task.status === 'COMPLETED').length;
+      const percentage = selectedSprintTasks.length ? Math.round((completed / selectedSprintTasks.length) * 100) : 0;
+      return (
+        <>
+          <button type="button" className={styles.backToSprints} onClick={() => setSelectedSprintId(null)}><ArrowLeft size={15} /> All sprints</button>
+          <header className={styles.sectionHeader}>
+            <div><span className={styles.sectionEyebrow}>{selectedSprint.project?.name ?? 'Project'} · Sprint workspace</span><h2>{selectedSprint.name}</h2><p>{formatDate(selectedSprint.start_date)} — {formatDate(selectedSprint.end_date)}</p></div>
+            {canManage && selectedSprint.status === 'PLANNED' && <button type="button" className={styles.secondaryAction} onClick={() => changeSprintStatus(selectedSprint, 'start')}>Start sprint</button>}
+            {canManage && selectedSprint.status === 'ACTIVE' && <button type="button" className={styles.secondaryAction} onClick={() => changeSprintStatus(selectedSprint, 'complete')}>Complete sprint</button>}
+          </header>
+          <div className={styles.sprintProgressSummary}><div className={styles.sprintProgressTrack}><span style={{ width: `${percentage}%` }} /></div><span>{completed} / {selectedSprintTasks.length} tasks completed</span></div>
+          <div className={styles.workspaceActions}>{renderLayoutToggle()}</div>
+          {sprintActionError && <p className={styles.error} role="alert">{sprintActionError}</p>}
+          {selectedSprintTasks.length
+            ? layoutView === 'BOARD'
+              ? renderBoard(selectedSprintTasks, false, true)
+              : renderList(selectedSprintTasks, true)
+            : <EmptyState title="No tasks in this sprint" detail="Move work here from the backlog when it is ready." />}
+          <NavLink className={styles.projectLink} to={`/projects/${selectedSprint.project?.id}`}>Open project workspace <ChevronRight size={14} /></NavLink>
+        </>
+      );
+    }
+    return (
+      <>
+        <header className={styles.sectionHeader}><div><h2>Sprints</h2><p>Plan and follow work by iteration.</p></div></header>
+        <div className={styles.workspaceActions}>{renderLayoutToggle()}</div>
+        {sprintActionError && <p className={styles.error} role="alert">{sprintActionError}</p>}
+        {loading ? <div className={styles.stateMessage}>Loading sprints…</div> : sprints.length ? (
+          layoutView === 'LIST' ? <div className={styles.sprintGroups}>
+            {sprintGroups.map(([status, label]) => {
+              const items = sprints.filter((sprint) => sprint.status === status);
+              if (!items.length) return null;
+              return (
+                <section className={styles.sprintGroup} key={status}>
+                  <h3>{label}</h3>
+                  {items.map((sprint) => {
+                    const sprintTasks = tasks.filter((task) => String(task.sprint?.id) === String(sprint.id));
+                    const completed = sprintTasks.filter((task) => task.status === 'COMPLETED').length;
+                    const percent = sprintTasks.length ? Math.round((completed / sprintTasks.length) * 100) : 0;
+                    return (
+                      <article className={styles.sprintCard} key={sprint.id}>
+                        <div className={styles.sprintCardHeader}>
+                          <div><span>{sprint.project?.name ?? 'Project'}</span><h4>{sprint.name}</h4></div>
+                          <span className={styles.sprintStatus}>{label}</span>
+                        </div>
+                        {sprint.goal && <p className={styles.sprintGoal}>{sprint.goal}</p>}
+                        <p className={styles.sprintDates}>{formatDate(sprint.start_date)} — {formatDate(sprint.end_date)}</p>
+                        <div className={styles.sprintProgressTrack}><span style={{ width: `${percent}%` }} /></div>
+                        <div className={styles.sprintCardFooter}><span>{completed} / {sprintTasks.length} tasks completed</span><button type="button" className={styles.textAction} onClick={() => setSelectedSprintId(sprint.id)}>View sprint <ChevronRight size={14} /></button></div>
+                        {canManageProject(sprint.project?.id) && status === 'PLANNED' && <button type="button" className={styles.sprintAction} onClick={() => changeSprintStatus(sprint, 'start')}>Start sprint</button>}
+                        {canManageProject(sprint.project?.id) && status === 'ACTIVE' && <button type="button" className={styles.sprintAction} onClick={() => changeSprintStatus(sprint, 'complete')}>Complete sprint</button>}
+                      </article>
+                    );
+                  })}
+                </section>
+              );
+            })}
+          </div> : <div className={styles.sprintBoard}>
+            {sprintGroups.map(([status, label]) => {
+              const items = sprints.filter((sprint) => sprint.status === status);
+              return (
+                <section className={styles.sprintBoardColumn} key={status}>
+                  <h3>{label}<span>{items.length}</span></h3>
+                  {items.map((sprint) => {
+                    const sprintTasks = tasks.filter((task) => String(task.sprint?.id) === String(sprint.id));
+                    const completed = sprintTasks.filter((task) => task.status === 'COMPLETED').length;
+                    const percent = sprintTasks.length ? Math.round((completed / sprintTasks.length) * 100) : 0;
+                    return (
+                      <article className={styles.sprintCard} key={sprint.id}>
+                        <div className={styles.sprintCardHeader}>
+                          <div><span>{sprint.project?.name ?? 'Project'}</span><h4>{sprint.name}</h4></div>
+                        </div>
+                        {sprint.goal && <p className={styles.sprintGoal}>{sprint.goal}</p>}
+                        <p className={styles.sprintDates}>{formatDate(sprint.start_date)} — {formatDate(sprint.end_date)}</p>
+                        <div className={styles.sprintProgressTrack}><span style={{ width: `${percent}%` }} /></div>
+                        <div className={styles.sprintCardFooter}><span>{completed} / {sprintTasks.length} tasks completed</span><button type="button" className={styles.textAction} onClick={() => setSelectedSprintId(sprint.id)}>View sprint <ChevronRight size={14} /></button></div>
+                        {canManageProject(sprint.project?.id) && status === 'PLANNED' && <button type="button" className={styles.sprintAction} onClick={() => changeSprintStatus(sprint, 'start')}>Start sprint</button>}
+                        {canManageProject(sprint.project?.id) && status === 'ACTIVE' && <button type="button" className={styles.sprintAction} onClick={() => changeSprintStatus(sprint, 'complete')}>Complete sprint</button>}
+                      </article>
+                    );
+                  })}
+                  {!items.length && <p className={styles.boardEmpty}>No sprints</p>}
+                </section>
+              );
+            })}
+          </div>
+        ) : <EmptyState title="No sprints yet" detail="Create a sprint from a project workspace to plan iterations." />}
+      </>
+    );
+  };
+
+  return (
+    <AppShell org={org} user={user}>
+      <div className={styles.workspace}>
+        <header className={styles.pageHeader}>
+          <div><span className={styles.eyebrow}>Your workspace</span><h1>Tasks</h1></div>
+          {manageableProjects.length > 0 && <button type="button" className={styles.newTaskButton} onClick={() => { setCreateError(''); setCreateOpen(true); }}><Plus size={16} /> New task</button>}
+        </header>
+
+        <nav className={styles.workspaceTabs} aria-label="Task workspaces" role="tablist">
+          {TASK_VIEWS.map(([value, label]) => (
+            <button type="button" role="tab" aria-selected={workspaceView === value} className={workspaceView === value ? styles.workspaceTabActive : ''} key={value} onClick={() => { setWorkspaceView(value); setActionError(''); }}>
+              {label}
+            </button>
+          ))}
+        </nav>
 
         {error && <div className={styles.error} role="alert">{error}</div>}
+        {permissionWarning && <p className={styles.permissionNotice} role="status">Project permissions could not be confirmed for all projects. Management actions are hidden where access could not be verified.</p>}
+        {actionError && <div className={styles.error} role="alert">{actionError}</div>}
 
-        <section className={styles.listPanel} aria-label="Tasks">
-          <div className={`${styles.row} ${styles.columnHeader}`}>
-            <span>Task</span>
-            <span>Status</span>
-            <span>Priority</span>
-            <span>Assignee</span>
-            <span>Due date</span>
+        {workspaceView === 'MY_WORK' && renderMyWork()}
+        {workspaceView === 'BACKLOG' && renderBacklog()}
+        {workspaceView === 'SPRINTS' && renderSprintWorkspace()}
+
+        {createOpen && (
+          <div className={styles.modalBackdrop} role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setCreateOpen(false); }}>
+            <section className={styles.createDialog} role="dialog" aria-modal="true" aria-labelledby="create-task-title">
+              <div className={styles.dialogHeader}><div><span className={styles.sectionEyebrow}>Add work</span><h2 id="create-task-title">New task</h2></div><button type="button" aria-label="Close" onClick={() => setCreateOpen(false)}>×</button></div>
+              <form onSubmit={handleCreateTask}>
+                <label>Project<select required value={newTask.projectId} onChange={(event) => setNewTask((current) => ({ ...current, projectId: event.target.value }))}>{manageableProjects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}</select></label>
+                <label>Task title<input required maxLength={255} autoFocus value={newTask.title} onChange={(event) => setNewTask((current) => ({ ...current, title: event.target.value }))} /></label>
+                <label>Description<textarea rows={4} value={newTask.description} onChange={(event) => setNewTask((current) => ({ ...current, description: event.target.value }))} /></label>
+                <div className={styles.formRow}>
+                  <label>Priority<select value={newTask.priority} onChange={(event) => setNewTask((current) => ({ ...current, priority: event.target.value }))}>{Object.entries(PRIORITY_META).map(([value, meta]) => <option key={value} value={value}>{meta.label}</option>)}</select></label>
+                  <label>Due date<input type="date" value={newTask.due_date} onChange={(event) => setNewTask((current) => ({ ...current, due_date: event.target.value }))} /></label>
+                </div>
+                {createError && <p className={styles.inlineError} role="alert">{createError}</p>}
+                <div className={styles.dialogActions}><button type="button" className={styles.cancelButton} onClick={() => setCreateOpen(false)}>Cancel</button><button type="submit" className={styles.newTaskButton} disabled={createSaving || !newTask.title.trim()}>{createSaving ? 'Creating…' : 'Create task'}</button></div>
+              </form>
+            </section>
           </div>
-
-          {loading ? (
-            <div className={styles.state}>Loading tasks…</div>
-          ) : filteredTasks.length ? (
-            filteredTasks.map((task) => (
-              <NavLink to={`/tasks/${task.id}`} className={styles.row} key={task.id}>
-                <span className={styles.taskName}>
-                  <CircleDot size={15} />
-                  <span>
-                    <strong>{task.title}</strong>
-                    <small>{task.project?.name ?? 'Project'}</small>
-                  </span>
-                </span>
-                <span className={styles.statusCell}><StatusBadge value={task.status} /></span>
-                <span className={styles.priorityCell}><PriorityBadge value={task.priority} /></span>
-                <span className={styles.assignee}>
-                  {task.assigned_to
-                    ? [task.assigned_to.first_name, task.assigned_to.last_name].filter(Boolean).join(' ') || task.assigned_to.email
-                    : 'Unassigned'}
-                </span>
-                <span className={`${styles.dueDate} ${isOverdue(task) ? styles.overdue : ''}`}>
-                  {task.due_date && (isOverdue(task) ? <CalendarDays size={13} /> : <CheckCircle2 size={13} />)}
-                  {isOverdue(task) ? `Overdue · ${formatDate(task.due_date)}` : formatDate(task.due_date)}
-                </span>
-              </NavLink>
-            ))
-          ) : (
-            <div className={styles.empty}>
-              <ListTodo size={22} />
-              <strong>{tasks.length ? 'No tasks match these filters' : 'No tasks yet'}</strong>
-              <span>{tasks.length ? 'Try another search or status.' : 'Tasks from your accessible projects will appear here.'}</span>
-            </div>
-          )}
-        </section>
-
-        {!loading && filteredTasks.length > 0 && (
-          <p className={styles.resultCount}>Showing {filteredTasks.length} of {tasks.length} tasks</p>
         )}
       </div>
     </AppShell>

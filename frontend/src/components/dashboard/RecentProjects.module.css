@@ -84,7 +84,8 @@
   justify-content: center;
   font-size: 10px;
   font-weight: 700;
-  color: rgba(255,255,255,0.9);
+  background: var(--color-clay-bg);
+  color: var(--color-clay);
   flex-shrink: 0;
   letter-spacing: 0.02em;
 }
@@ -130,7 +131,7 @@
 }
 
 .active    { background: var(--color-success-bg); color: var(--color-success); }
-.planning  { background: var(--color-border-subtle); color: var(--color-text-secondary); }
+.planning  { background: var(--color-slate-bg); color: var(--color-slate); }
 .onHold    { background: var(--color-warning-bg); color: var(--color-warning); }
 .completed { background: var(--color-sage-light); color: var(--color-sage-dark); }
 

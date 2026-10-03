@@ -37,7 +37,8 @@ class HasTaskAccess(permissions.BasePermission):
 
         # --- PERMISSION RULES ---
         
-        if view.action in ['retrieve']:
+        action = getattr(view, 'action', None)
+        if action in ['retrieve', 'subtasks', 'activity', 'attachments', 'attachment_detail'] or action is None:
             if has_management_rights:
                 return True
             if obj.assigned_to == user:
@@ -50,7 +51,7 @@ class HasTaskAccess(permissions.BasePermission):
                 return True
             return False
 
-        elif view.action in ['update', 'partial_update']:
+        elif action in ['update', 'partial_update']:
             if has_management_rights:
                 return True
             
@@ -60,7 +61,7 @@ class HasTaskAccess(permissions.BasePermission):
                 
             return False
 
-        elif view.action in ['destroy']:
+        elif action in ['destroy']:
             return has_management_rights
             
         return False

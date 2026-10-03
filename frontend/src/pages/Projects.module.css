@@ -148,7 +148,7 @@
 .formError {
   grid-column: 1 / -1;
   margin: -5px 0 0;
-  color: #9c5145;
+  color: var(--color-danger);
   font-size: 11px;
 }
 
@@ -159,10 +159,10 @@
   gap: 12px;
   margin: 18px 0;
   padding: 11px 13px;
-  border: 1px solid #e7c8be;
+  border: 1px solid var(--color-rose);
   border-radius: 7px;
-  background: #fbefea;
-  color: #82483e;
+  background: var(--color-rose-bg);
+  color: var(--color-rose);
   font-size: 12px;
 }
 
@@ -177,7 +177,7 @@
 
 .dataNotice {
   margin: -5px 0 0;
-  color: #8b6f50;
+  color: var(--color-warning);
   font-size: 10px;
   line-height: 1.5;
 }
@@ -279,25 +279,29 @@
 
 .markOrb {
   border-radius: 15px 15px 15px 5px;
-  background: #e5ddd0;
+  background: var(--color-clay-bg);
+  color: var(--color-clay);
 }
 
 .markGrid {
   border-radius: 12px;
-  background-color: #e7e8df;
-  background-image: linear-gradient(rgb(100 116 95 / 10%) 1px, transparent 1px), linear-gradient(90deg, rgb(100 116 95 / 10%) 1px, transparent 1px);
+  background-color: var(--color-plum-bg);
+  background-image: linear-gradient(rgb(128 107 120 / 10%) 1px, transparent 1px), linear-gradient(90deg, rgb(128 107 120 / 10%) 1px, transparent 1px);
   background-size: 8px 8px;
+  color: var(--color-plum);
 }
 
 .markSquare {
   border-radius: 9px;
-  background: #eadbd1;
+  background: var(--color-clay-bg);
+  color: var(--color-clay);
 }
 
 .markRing {
   border-radius: 50%;
-  background: #e2e4dc;
-  box-shadow: inset 0 0 0 5px #f3f0e9, inset 0 0 0 6px #aab1a2;
+  background: var(--color-sage-light);
+  box-shadow: inset 0 0 0 5px var(--color-bg), inset 0 0 0 6px var(--color-sage);
+  color: var(--color-sage-dark);
 }
 
 .projectContent {
@@ -360,23 +364,23 @@
 }
 
 .planning {
-  background: #f0ece3;
-  color: #887b66;
+  background: var(--color-slate-bg);
+  color: var(--color-slate);
 }
 
 .active {
-  background: #e7ece4;
-  color: #52634e;
+  background: var(--color-sage-light);
+  color: var(--color-sage-dark);
 }
 
 .hold {
-  background: #f3e8df;
-  color: #946b4e;
+  background: var(--color-amber-bg);
+  color: var(--color-amber);
 }
 
 .completed {
-  background: #e9e9e1;
-  color: #6c7568;
+  background: var(--color-sage-light);
+  color: var(--color-sage-dark);
 }
 
 .progressRow {
@@ -392,14 +396,14 @@
   height: 4px;
   flex: 1;
   border-radius: 10px;
-  background: #eae7df;
+  background: var(--color-surface-raised);
 }
 
 .progressTrack span {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: var(--moss, #64745f);
+  background: var(--color-sage-dark);
 }
 
 .progressRow strong {
@@ -427,7 +431,7 @@
 }
 
 .overdue {
-  color: #a45e4e;
+  color: var(--color-danger);
 }
 
 .teamLabel {
@@ -461,25 +465,25 @@
   place-items: center;
   border: 2px solid var(--page-bg, #f6f3ec);
   border-radius: 50%;
-  background: #ddd2c2;
-  color: #544b40;
+  background: var(--color-clay-bg);
+  color: var(--color-clay);
   font-size: 7px;
   font-weight: 700;
 }
 
 .avatar:nth-child(2n) {
-  background: #dce1d7;
-  color: #495246;
+  background: var(--color-sage-light);
+  color: var(--color-sage-dark);
 }
 
 .avatar:nth-child(3n) {
-  background: #e6d6cd;
-  color: #6e4f43;
+  background: var(--color-slate-bg);
+  color: var(--color-slate);
 }
 
 .avatarMore {
-  background: #eeece5;
-  color: #777970;
+  background: var(--color-surface-raised);
+  color: var(--color-text-secondary);
 }
 
 .uncertainMeta {
@@ -499,13 +503,13 @@
   border: 0;
   border-radius: 6px;
   background: transparent;
-  color: #82857d;
+  color: var(--color-text-secondary);
   cursor: pointer;
 }
 
 .menuButton:hover {
-  background: #eeece5;
-  color: #3f443d;
+  background: var(--color-surface-raised);
+  color: var(--color-text-primary);
 }
 
 .menu {
@@ -539,11 +543,11 @@
 
 .menu a:hover,
 .menu button:hover {
-  background: #f2f0e9;
+  background: var(--color-bg);
 }
 
 .menu .deleteAction {
-  color: #a04f43;
+  color: var(--color-danger);
 }
 
 .skeletonRow {

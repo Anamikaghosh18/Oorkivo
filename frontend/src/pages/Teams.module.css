@@ -68,7 +68,7 @@
 .createButton:hover,
 .createSubmit:hover:not(:disabled) {
   transform: translateY(-1px);
-  background: #52624d;
+  background: var(--color-sage-dark);
 }
 
 .createButton:disabled,
@@ -136,7 +136,7 @@
 .formError {
   grid-column: 1 / -1;
   margin: -5px 0 0;
-  color: #a04f43;
+  color: var(--color-danger);
   font-size: 11px;
 }
 
@@ -147,10 +147,10 @@
   gap: 12px;
   margin-top: 18px;
   padding: 11px 13px;
-  border: 1px solid #e7c8be;
+  border: 1px solid var(--color-rose);
   border-radius: 7px;
-  background: #fbefea;
-  color: #82483e;
+  background: var(--color-rose-bg);
+  color: var(--color-rose);
   font-size: 12px;
 }
 
@@ -192,10 +192,10 @@
   height: 34px;
   flex: 0 0 auto;
   place-items: center;
-  border: 1px solid #e4e1d8;
+  border: 1px solid var(--color-border-subtle);
   border-radius: 10px;
-  background: #eeece4;
-  color: var(--color-moss, #64745f);
+  background: var(--color-slate-bg);
+  color: var(--color-slate);
 }
 
 .summaryItem > span:last-child {
@@ -258,7 +258,7 @@
 
 .dataNotice {
   margin: 0 0 11px;
-  color: #8b6f50;
+  color: var(--color-warning);
   font-size: 10px;
   line-height: 1.5;
 }
@@ -329,10 +329,10 @@
   border-radius: 13px 13px 13px 5px;
 }
 
-.markSand { background: #e8ded0; color: #786956; }
-.markSage { background: #e1e6dc; color: #5b6855; }
-.markClay { background: #efdfd5; color: #8f6553; }
-.markStone { background: #e6e4dc; color: #6c7068; }
+.markSand { background: var(--color-amber-bg); color: var(--color-amber); }
+.markSage { background: var(--color-sage-light); color: var(--color-sage-dark); }
+.markClay { background: var(--color-clay-bg); color: var(--color-clay); }
+.markStone { background: var(--color-slate-bg); color: var(--color-slate); }
 
 .teamInfo {
   display: flex;
@@ -372,7 +372,7 @@
 }
 
 .cardMemberPreview .loadIssue {
-  color: #a45e4e;
+  color: var(--color-danger);
 }
 
 .avatar {
@@ -384,15 +384,15 @@
   place-items: center;
   border: 2px solid var(--color-bg, #f6f3ec);
   border-radius: 50%;
-  background: #e3d5c5;
-  color: #574b3e;
+  background: var(--color-clay-bg);
+  color: var(--color-clay);
   font-size: 7px;
   font-weight: 700;
 }
 
-.avatarTone1 { background: #dfe3d9; color: #4f5c49; }
-.avatarTone2 { background: #ead9cf; color: #805c4d; }
-.avatarTone3 { background: #e5e2d8; color: #5d6058; }
+.avatarTone1 { background: var(--color-slate-bg); color: var(--color-slate); }
+.avatarTone2 { background: var(--color-clay-bg); color: var(--color-clay); }
+.avatarTone3 { background: var(--color-sage-light); color: var(--color-sage-dark); }
 
 .expandIcon {
   display: grid;
@@ -466,7 +466,7 @@
 }
 
 .memberError {
-  color: #a04f43;
+  color: var(--color-danger);
   font-size: 10px;
 }
 
@@ -524,15 +524,15 @@
 .role {
   padding: 4px 7px;
   border-radius: 12px;
-  background: #eeece5;
-  color: #73766e;
+  background: var(--color-surface-raised);
+  color: var(--color-text-secondary);
   font-size: 8px;
   font-weight: 600;
 }
 
 .leadRole {
-  background: #e7ece4;
-  color: #52634e;
+  background: var(--color-sage-light);
+  color: var(--color-sage-dark);
 }
 
 .workload {

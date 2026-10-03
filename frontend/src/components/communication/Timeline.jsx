@@ -55,8 +55,10 @@ function ActivityEntry({ item }) {
 }
 
 /* ── Comment Entry ─────────────────────────────────────────── */
-function CommentEntry({ comment, currentUserId, onDelete }) {
+function CommentEntry({ comment, currentUserId, onDelete, onUpdate }) {
   const [showMenu, setShowMenu] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(comment.content);
   const menuRef = useRef(null);
   const isAuthor = comment.author?.id === currentUserId;
 
@@ -93,6 +95,17 @@ function CommentEntry({ comment, currentUserId, onDelete }) {
               {showMenu && (
                 <div className={styles.menuDropdown}>
                   <button
+                    className={styles.menuItem}
+                    onClick={() => {
+                      setDraft(comment.content);
+                      setEditing(true);
+                      setShowMenu(false);
+                    }}
+                  >
+                    <Pencil size={12} />
+                    Edit
+                  </button>
+                  <button
                     className={`${styles.menuItem} ${styles.menuDanger}`}
                     onClick={() => {
                       onDelete(comment.id);
@@ -107,7 +120,25 @@ function CommentEntry({ comment, currentUserId, onDelete }) {
             </div>
           )}
         </div>
-        <div className={styles.commentContent}>{comment.content}</div>
+        {editing ? (
+          <form className={styles.editForm} onSubmit={(event) => {
+            event.preventDefault();
+            const content = draft.trim();
+            if (!content || content === comment.content) {
+              setEditing(false);
+              return;
+            }
+            onUpdate(comment.id, content).then((saved) => {
+              if (saved) setEditing(false);
+            });
+          }}>
+            <textarea value={draft} onChange={(event) => setDraft(event.target.value)} rows={3} aria-label="Edit comment" />
+            <div>
+              <button type="button" onClick={() => setEditing(false)}><X size={13} /> Cancel</button>
+              <button type="submit" disabled={!draft.trim()}><Check size={13} /> Save</button>
+            </div>
+          </form>
+        ) : <div className={styles.commentContent}>{comment.content}</div>}
       </div>
     </div>
   );
@@ -168,7 +199,7 @@ function CommentInput({ onSubmit, currentUser }) {
 }
 
 /* ── Timeline (main export) ────────────────────────────────── */
-export default function Timeline({ items, currentUserId, currentUser, onAddComment, onDeleteComment }) {
+export default function Timeline({ items, currentUserId, currentUser, onAddComment, onDeleteComment, onUpdateComment }) {
   return (
     <div className={styles.timeline}>
       <div className={styles.header}>
@@ -188,6 +219,7 @@ export default function Timeline({ items, currentUserId, currentUser, onAddComme
               comment={item}
               currentUserId={currentUserId}
               onDelete={onDeleteComment}
+              onUpdate={onUpdateComment}
             />
           ) : (
             <ActivityEntry key={`a-${item.id}`} activity={item} />

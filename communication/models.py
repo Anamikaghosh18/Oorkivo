@@ -38,6 +38,14 @@ class Activity(models.Model):
         STATUS_CHANGED = 'STATUS_CHANGED', 'Status Changed'
         PRIORITY_CHANGED = 'PRIORITY_CHANGED', 'Priority Changed'
         COMPLETED = 'COMPLETED', 'Completed'
+        DUE_DATE_CHANGED = 'DUE_DATE_CHANGED', 'Due Date Changed'
+        COMMENTED = 'COMMENTED', 'Comment Added'
+        MILESTONE_COMPLETED = 'MILESTONE_COMPLETED', 'Milestone Completed'
+        MEMBER_ADDED = 'MEMBER_ADDED', 'Member Added'
+        SPRINT_CREATED = 'SPRINT_CREATED', 'Sprint Created'
+        SPRINT_STARTED = 'SPRINT_STARTED', 'Sprint Started'
+        SPRINT_COMPLETED = 'SPRINT_COMPLETED', 'Sprint Completed'
+        TASK_MOVED_TO_SPRINT = 'TASK_MOVED_TO_SPRINT', 'Task Moved to Sprint'
 
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='activities')
     task = models.ForeignKey(Task, on_delete=models.CASCADE, null=True, blank=True, related_name='activities')

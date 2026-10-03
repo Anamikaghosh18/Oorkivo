@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { NavLink, useParams } from 'react-router-dom';
-import { ArrowLeft, CalendarDays, CheckCircle2, Circle, Clock3, FolderKanban, Users } from 'lucide-react';
+import { ArrowLeft, CalendarDays, CheckCircle2, Circle, Clock3, FolderKanban, Users, Plus, ChevronDown, Activity as ActivityIcon } from 'lucide-react';
 import AppShell from '../components/layout/AppShell';
 import { authApi, organizationsApi, projectsApi, tasksApi } from '../services/api';
 import styles from './ProjectDetail.module.css';
@@ -13,6 +13,7 @@ const PROJECT_STATUS = {
 };
 
 const TASK_STATUS = {
+  BACKLOG: 'Backlog',
   TODO: 'To do',
   IN_PROGRESS: 'In progress',
   IN_REVIEW: 'In review',
@@ -105,12 +106,67 @@ function TaskRow({ task }) {
   );
 }
 
+function ActivityFeed({ items, tasks, error }) {
+  if (error) return <p className={styles.inlineError}>{error}</p>;
+  if (!items.length) return <p className={styles.quietMessage}>Project updates will appear here as work moves forward.</p>;
+  const taskById = new Map(tasks.map((task) => [String(task.id), task]));
+  const eventText = (event) => {
+    const task = taskById.get(String(event.task));
+    const details = event.details || {};
+    if (event.action === 'STATUS_CHANGED') return `changed status from ${TASK_STATUS[details.old] || details.old} to ${TASK_STATUS[details.new] || details.new}`;
+    if (event.action === 'PRIORITY_CHANGED') return `changed priority from ${details.old} to ${details.new}`;
+    if (event.action === 'ASSIGNED') return 'updated the task assignment';
+    if (event.action === 'DUE_DATE_CHANGED') return 'updated the due date';
+    if (event.action === 'COMMENTED') return 'added a comment';
+    if (event.action === 'MILESTONE_COMPLETED') return `completed milestone “${details.milestone_title}”`;
+    if (event.action === 'MEMBER_ADDED') return 'added a project member';
+    if (event.action === 'SPRINT_CREATED') return `created sprint “${details.sprint_name}”`;
+    if (event.action === 'SPRINT_STARTED') return `started sprint “${details.sprint_name}”`;
+    if (event.action === 'SPRINT_COMPLETED') return `completed sprint “${details.sprint_name}”`;
+    if (event.action === 'TASK_MOVED_TO_SPRINT') return details.new_sprint_name ? `moved a task to “${details.new_sprint_name}”` : 'moved a task to the backlog';
+    if (event.action === 'COMPLETED') return 'completed a task';
+    if (event.action === 'CREATED' && details.parent_task_title) return `added a subtask to “${details.parent_task_title}”`;
+    return 'created a task';
+  };
+  return (
+    <ol className={styles.activityList}>
+      {items.map((item) => (
+        <li className={styles.activityItem} key={item.id}>
+          <span className={styles.activityMarker}><ActivityIcon size={13} /></span>
+          <div>
+            <p><strong>{fullName(item.actor)}</strong> {eventText(item)}{taskById.get(String(item.task)) && <> · <NavLink to={`/tasks/${item.task}`}>{taskById.get(String(item.task)).title}</NavLink></>}</p>
+            <time>{new Date(item.created_at).toLocaleString('en', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</time>
+          </div>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
 export default function ProjectDetail() {
   const { id } = useParams();
   const [project, setProject] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [members, setMembers] = useState([]);
   const [discussion, setDiscussion] = useState([]);
+  const [milestones, setMilestones] = useState([]);
+  const [sprints, setSprints] = useState([]);
+  const [activity, setActivity] = useState([]);
+  const [activeTab, setActiveTab] = useState('OVERVIEW');
+  const [backlogSearch, setBacklogSearch] = useState('');
+  const [backlogPriority, setBacklogPriority] = useState('ALL');
+  const [backlogStatus, setBacklogStatus] = useState('ALL');
+  const [sprintForm, setSprintForm] = useState({ name: '', goal: '', start_date: '', end_date: '' });
+  const [editingSprintId, setEditingSprintId] = useState(null);
+  const [sprintError, setSprintError] = useState('');
+  const [sprintSaving, setSprintSaving] = useState(false);
+  const [sprintActionError, setSprintActionError] = useState('');
+  const [sprintFormOpen, setSprintFormOpen] = useState(false);
+  const [taskFilter, setTaskFilter] = useState('MINE');
+  const [openMilestone, setOpenMilestone] = useState(null);
+  const [milestoneForm, setMilestoneForm] = useState({ title: '', description: '', target_date: '', tasks: [] });
+  const [milestoneSaving, setMilestoneSaving] = useState(false);
+  const [milestoneError, setMilestoneError] = useState('');
   const [teamName, setTeamName] = useState('');
   const [user, setUser] = useState(null);
   const [org, setOrg] = useState(null);
@@ -119,6 +175,8 @@ export default function ProjectDetail() {
   const [tasksError, setTasksError] = useState('');
   const [membersError, setMembersError] = useState('');
   const [discussionError, setDiscussionError] = useState('');
+  const [milestonesError, setMilestonesError] = useState('');
+  const [activityError, setActivityError] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -126,7 +184,13 @@ export default function ProjectDetail() {
     setTasksError('');
     setMembersError('');
     setDiscussionError('');
+    setMilestonesError('');
+    setActivityError('');
+    setMilestoneError('');
     setDiscussion([]);
+    setMilestones([]);
+    setActivity([]);
+    setSprints([]);
     try {
       const [projectResult, userResult, orgsResult] = await Promise.all([
         projectsApi.get(id),
@@ -146,6 +210,17 @@ export default function ProjectDetail() {
         projectsApi.members(id),
         currentOrg?.id ? organizationsApi.teams(currentOrg.id) : Promise.resolve({ data: [] }),
       ]);
+      const [milestonesResult, activityResult, sprintsResult] = await Promise.allSettled([
+        projectsApi.milestones(id),
+        projectsApi.activity(id),
+        projectsApi.sprints(id),
+      ]);
+      if (milestonesResult.status === 'fulfilled') setMilestones(getRows(milestonesResult.value.data));
+      else setMilestonesError('Project milestones could not be loaded.');
+      if (activityResult.status === 'fulfilled') setActivity(getRows(activityResult.value.data));
+      else setActivityError('Project activity could not be loaded.');
+      if (sprintsResult.status === 'fulfilled') setSprints(getRows(sprintsResult.value.data));
+      else setSprintActionError('Project sprints could not be loaded.');
       if (tasksResult.status === 'fulfilled') setTasks(getRows(tasksResult.value.data));
       else {
         setTasks([]);
@@ -199,7 +274,22 @@ export default function ProjectDetail() {
 
   const completedCount = tasks.filter((task) => task.status === 'COMPLETED').length;
   const progress = tasks.length ? Math.round((completedCount / tasks.length) * 100) : 0;
+  const myTaskCount = tasks.filter((task) => String(task.assigned_to?.id) === String(user?.id)).length;
+  const filteredTasks = tasks.filter((task) => {
+    if (taskFilter === 'MINE') return String(task.assigned_to?.id) === String(user?.id);
+    if (taskFilter === 'DUE_SOON') {
+      if (!task.due_date || task.status === 'COMPLETED') return false;
+      const days = Math.ceil((new Date(`${task.due_date}T00:00:00`) - new Date(new Date().toDateString())) / 86400000);
+      return days >= 0 && days <= 7;
+    }
+    if (taskFilter === 'OVERDUE') {
+      return Boolean(task.due_date && task.status !== 'COMPLETED' && new Date(`${task.due_date}T00:00:00`) < new Date(new Date().toDateString()));
+    }
+    if (taskFilter === 'COMPLETED') return task.status === 'COMPLETED';
+    return true;
+  });
   const taskGroups = useMemo(() => [
+    { key: 'BACKLOG', label: 'Backlog' },
     { key: 'IN_PROGRESS', label: 'In progress' },
     { key: 'TODO', label: 'To do' },
     { key: 'IN_REVIEW', label: 'In review' },
@@ -207,8 +297,126 @@ export default function ProjectDetail() {
     { key: 'COMPLETED', label: 'Completed' },
   ].map((group) => ({
     ...group,
-    tasks: tasks.filter((task) => task.status === group.key),
-  })).filter((group) => group.tasks.length > 0), [tasks]);
+    tasks: filteredTasks.filter((task) => task.status === group.key),
+  })).filter((group) => group.tasks.length > 0), [filteredTasks]);
+  const timelineEvents = useMemo(() => {
+    const entries = [];
+    if (project?.start_date) entries.push({ date: project.start_date, label: 'Project started' });
+    milestones.forEach((milestone) => {
+      if (milestone.target_date) entries.push({ date: milestone.target_date, label: milestone.title });
+    });
+    tasks.filter((task) => task.due_date).sort((a, b) => a.due_date.localeCompare(b.due_date)).slice(0, 3)
+      .forEach((task) => entries.push({ date: task.due_date, label: `${task.title} due` }));
+    if (project?.target_end_date) entries.push({ date: project.target_end_date, label: 'Project deadline' });
+    return entries.sort((a, b) => a.date.localeCompare(b.date));
+  }, [project, milestones, tasks]);
+  const canManageMilestones = members.some((membership) =>
+    String(membership.user?.id) === String(user?.id) &&
+    ['MANAGER', 'CONTRIBUTOR'].includes(membership.role)
+  ) || ['OWNER', 'ADMIN'].includes(org?.access_level);
+  const canManageSprints = members.some((membership) =>
+    String(membership.user?.id) === String(user?.id) && membership.role === 'MANAGER'
+  ) || ['OWNER', 'ADMIN'].includes(org?.access_level);
+  const backlogTasks = tasks.filter((task) => !task.sprint).filter((task) => {
+    const query = backlogSearch.trim().toLocaleLowerCase();
+    return (backlogPriority === 'ALL' || task.priority === backlogPriority)
+      && (backlogStatus === 'ALL' || task.status === backlogStatus)
+      && (!query || `${task.title} ${task.description} ${task.assigned_to?.first_name ?? ''} ${task.assigned_to?.last_name ?? ''}`.toLocaleLowerCase().includes(query));
+  }).sort((a, b) => (a.backlog_order ?? 0) - (b.backlog_order ?? 0));
+
+  const handleCreateMilestone = async (event) => {
+    event.preventDefault();
+    if (!milestoneForm.title.trim()) return;
+    setMilestoneSaving(true);
+    setMilestoneError('');
+    try {
+      const response = await projectsApi.createMilestone(id, {
+        ...milestoneForm,
+        title: milestoneForm.title.trim(),
+        target_date: milestoneForm.target_date || null,
+        tasks: milestoneForm.tasks.map(Number),
+      });
+      setMilestones((current) => [...current, response.data].sort((a, b) => (a.target_date || '').localeCompare(b.target_date || '')));
+      setMilestoneForm({ title: '', description: '', target_date: '', tasks: [] });
+    } catch (saveError) {
+      const detail = saveError.response?.data?.detail;
+      setMilestoneError(typeof detail === 'string' ? detail : 'Milestone could not be saved. Check your access and try again.');
+    } finally {
+      setMilestoneSaving(false);
+    }
+  };
+
+  const handleSaveSprint = async (event) => {
+    event.preventDefault();
+    setSprintError('');
+    setSprintSaving(true);
+    const payload = {
+      ...sprintForm,
+      name: sprintForm.name.trim(),
+      start_date: sprintForm.start_date,
+      end_date: sprintForm.end_date,
+    };
+    try {
+      const response = editingSprintId
+        ? await projectsApi.updateSprint(id, editingSprintId, payload)
+        : await projectsApi.createSprint(id, payload);
+      setSprints((current) => {
+        const next = editingSprintId
+          ? current.map((sprint) => sprint.id === editingSprintId ? response.data : sprint)
+          : [response.data, ...current];
+        return next.sort((a, b) => b.start_date.localeCompare(a.start_date));
+      });
+      setSprintForm({ name: '', goal: '', start_date: '', end_date: '' });
+      setEditingSprintId(null);
+      setSprintFormOpen(false);
+    } catch (saveError) {
+      const detail = saveError.response?.data?.detail;
+      setSprintError(typeof detail === 'string' ? detail : 'Sprint could not be saved. Check the dates and your permissions.');
+    } finally {
+      setSprintSaving(false);
+    }
+  };
+
+  const editSprint = (sprint) => {
+    setEditingSprintId(sprint.id);
+    setSprintForm({
+      name: sprint.name,
+      goal: sprint.goal || '',
+      start_date: sprint.start_date,
+      end_date: sprint.end_date,
+    });
+    setSprintFormOpen(true);
+  };
+
+  const changeSprintStatus = async (sprint, action) => {
+    setSprintActionError('');
+    try {
+      const response = action === 'start'
+        ? await projectsApi.startSprint(id, sprint.id)
+        : await projectsApi.completeSprint(id, sprint.id);
+      setSprints((current) => current.map((item) => item.id === sprint.id ? response.data : item));
+      const history = await projectsApi.activity(id);
+      setActivity(getRows(history.data));
+    } catch (statusError) {
+      const detail = statusError.response?.data?.detail;
+      setSprintActionError(typeof detail === 'string' ? detail : 'Sprint status could not be changed. Check that no other sprint is active.');
+    }
+  };
+
+  const moveTask = async (task, sprintValue) => {
+    setSprintActionError('');
+    try {
+      const response = await tasksApi.update(task.id, { sprint_id: sprintValue ? Number(sprintValue) : null });
+      setTasks((current) => current.map((item) => item.id === task.id ? {
+        ...item,
+        ...response.data,
+        sprint: sprintValue ? sprints.find((sprint) => String(sprint.id) === sprintValue) : null,
+      } : item));
+    } catch (moveError) {
+      const detail = moveError.response?.data?.detail;
+      setSprintActionError(typeof detail === 'string' ? detail : 'Task could not be moved. Only the assignee or project manager can move it.');
+    }
+  };
 
   return (
     <AppShell org={org} user={user}>
@@ -233,20 +441,25 @@ export default function ProjectDetail() {
                 </div>
                 <p>{project.description || 'No project description has been added.'}</p>
               </div>
-              <div className={styles.headerArtwork} aria-hidden="true">
-                <svg viewBox="0 0 170 125" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M92 15C110 8 133 15 145 31C157 48 149 71 134 83C119 96 96 91 84 76C73 62 74 22 92 15Z" fill="#D9C9B8" fillOpacity=".52" />
-                  <path d="M29 95C35 79 51 72 66 78C79 83 85 96 83 108H24C23 104 25 99 29 95Z" fill="#B8BFAF" fillOpacity=".6" />
-                  <rect x="48" y="37" width="56" height="43" rx="4" fill="#FFFDF8" stroke="#D9D5CC" />
-                  <path d="M57 49H90M57 58H96M57 67H79" stroke="#B69D89" strokeWidth="1.7" strokeLinecap="round" />
-                  <circle cx="119" cy="49" r="9" stroke="#64745F" strokeWidth="1.4" />
-                  <path d="M115 49L118 52L123 46" stroke="#64745F" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-                  <path d="M22 109H151" stroke="#737A76" strokeOpacity=".3" strokeLinecap="round" />
-                </svg>
-              </div>
             </header>
 
-            <section className={styles.projectFacts} aria-label="Project overview">
+            <nav className={styles.projectTabs} aria-label="Project workspace sections" role="tablist">
+              {[
+                ['OVERVIEW', 'Overview'],
+                ['BACKLOG', 'Backlog'],
+                ['SPRINTS', 'Sprints'],
+                ['TASKS', 'Tasks'],
+                ['ACTIVITY', 'Activity'],
+              ].map(([key, label]) => (
+                <button key={key} id={`project-tab-${key.toLowerCase()}`} type="button" role="tab" aria-selected={activeTab === key} aria-controls={`project-panel-${key.toLowerCase()}`} className={activeTab === key ? styles.projectTabActive : ''} onClick={() => setActiveTab(key)}>
+                  {label}
+                  {key === 'BACKLOG' && <span>{tasks.filter((task) => !task.sprint).length}</span>}
+                  {key === 'SPRINTS' && <span>{sprints.length}</span>}
+                </button>
+              ))}
+            </nav>
+
+            {activeTab === 'OVERVIEW' && <section className={styles.projectFacts} aria-label="Project overview">
               <div className={styles.factItem}>
                 <span className={styles.factIcon}><FolderKanban size={15} /></span>
                 <span><small>Tasks</small><strong>{tasksError ? 'Unavailable' : tasks.length}</strong></span>
@@ -260,12 +473,81 @@ export default function ProjectDetail() {
                 <span><small>Target date</small><strong>{formatDate(project.target_end_date)}</strong></span>
               </div>
               <div className={styles.factItem}>
+                <span className={styles.factIcon}><CalendarDays size={15} /></span>
+                <span><small>Start date</small><strong>{formatDate(project.start_date)}</strong></span>
+              </div>
+              <div className={styles.factItem}>
                 <span className={styles.factIcon}><Users size={15} /></span>
                 <span><small>Team</small><strong>{teamName || 'Cross-functional'}</strong></span>
               </div>
-            </section>
+              <div className={styles.factItem}>
+                <span className={styles.factIcon}><Circle size={15} /></span>
+                <span><small>Your tasks</small><strong>{myTaskCount}</strong></span>
+              </div>
+            </section>}
 
-            <div className={styles.contentGrid}>
+            {activeTab === 'OVERVIEW' && <section className={styles.roadmapGrid} aria-label="Project roadmap and timeline">
+              <div className={styles.roadmapSection}>
+                <div className={styles.sectionHeading}>
+                  <div><span className={styles.sectionEyebrow}>Project roadmap</span><h2>Milestones</h2></div>
+                  <span className={styles.taskTotal}>{milestones.length}</span>
+                </div>
+                {milestonesError ? (
+                  <p className={styles.inlineError}>{milestonesError}</p>
+                ) : milestones.length ? (
+                  <ol className={styles.milestoneList}>
+                    {milestones.map((milestone) => {
+                      const milestoneTasks = tasks.filter((task) => milestone.tasks?.some((taskId) => String(taskId) === String(task.id)));
+                      return (
+                        <li key={milestone.id}>
+                          <button type="button" className={styles.milestoneButton} onClick={() => setOpenMilestone(openMilestone === milestone.id ? null : milestone.id)} aria-expanded={openMilestone === milestone.id}>
+                            <span className={styles.milestoneName}><strong>{milestone.title}</strong><small>{milestone.target_date ? formatDate(milestone.target_date) : 'No target date'}</small></span>
+                            <span className={styles.milestoneProgress}><span style={{ width: `${milestone.completion}%` }} /></span>
+                            <span className={styles.milestonePercent}>{milestone.completion}%</span>
+                            <ChevronDown size={15} className={openMilestone === milestone.id ? styles.chevronOpen : ''} />
+                          </button>
+                          {openMilestone === milestone.id && (
+                            <div className={styles.milestoneDetails}>
+                              {milestone.description && <p>{milestone.description}</p>}
+                              {milestoneTasks.length
+                                ? milestoneTasks.map((task) => <NavLink key={task.id} to={`/tasks/${task.id}`}>{task.title}<small>{TASK_STATUS[task.status] || task.status}</small></NavLink>)
+                                : <span>No tasks are linked to this milestone.</span>}
+                            </div>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ol>
+                ) : <p className={styles.quietMessage}>Milestones will make the project’s next delivery points clear.</p>}
+
+                {canManageMilestones && (
+                  <details className={styles.milestoneCreate}>
+                    <summary><Plus size={14} /> Add milestone</summary>
+                    <form onSubmit={handleCreateMilestone}>
+                      <label>Title<input required value={milestoneForm.title} onChange={(event) => setMilestoneForm((form) => ({ ...form, title: event.target.value }))} maxLength={255} /></label>
+                      <label>Description<textarea value={milestoneForm.description} onChange={(event) => setMilestoneForm((form) => ({ ...form, description: event.target.value }))} rows={2} /></label>
+                      <label>Target date<input type="date" value={milestoneForm.target_date} onChange={(event) => setMilestoneForm((form) => ({ ...form, target_date: event.target.value }))} /></label>
+                      <label>Associated tasks<select multiple value={milestoneForm.tasks} onChange={(event) => setMilestoneForm((form) => ({ ...form, tasks: Array.from(event.target.selectedOptions, (option) => option.value) }))}>
+                        {tasks.map((task) => <option key={task.id} value={task.id}>{task.title}</option>)}
+                      </select></label>
+                      {milestoneError && <p className={styles.inlineError} role="alert">{milestoneError}</p>}
+                      <button type="submit" disabled={milestoneSaving}>{milestoneSaving ? 'Saving…' : 'Save milestone'}</button>
+                    </form>
+                  </details>
+                )}
+              </div>
+
+              <div className={styles.timelineSection}>
+                <div className={styles.sectionHeading}>
+                  <div><span className={styles.sectionEyebrow}>Key dates</span><h2>Project timeline</h2></div>
+                </div>
+                {timelineEvents.length
+                  ? <ol className={styles.projectTimeline}>{timelineEvents.map((event, index) => <li key={`${event.date}-${event.label}-${index}`}><time>{formatDate(event.date)}</time><span>{event.label}</span></li>)}</ol>
+                  : <p className={styles.quietMessage}>Project dates and milestone targets will appear here.</p>}
+              </div>
+            </section>}
+
+            {activeTab === 'OVERVIEW' && <div className={styles.contentGrid}>
               <section className={styles.tasksSection}>
                 <div className={styles.sectionHeading}>
                   <div>
@@ -274,22 +556,29 @@ export default function ProjectDetail() {
                   </div>
                   {!tasksError && <span className={styles.taskTotal}>{tasks.length} total</span>}
                 </div>
-
                 {!tasksError && tasks.length > 0 && (
                   <div className={styles.progressSummary}>
                     <div className={styles.progressTrack}><span style={{ width: `${progress}%` }} /></div>
                     <strong>{progress}% complete</strong>
                   </div>
                 )}
-
+                {!tasksError && (
+                  <nav className={styles.taskFilters} aria-label="Filter project tasks">
+                    {[
+                      ['ALL', 'All'],
+                      ['MINE', `Assigned to me · ${myTaskCount}`],
+                      ['DUE_SOON', 'Due soon'],
+                      ['OVERDUE', 'Overdue'],
+                      ['COMPLETED', 'Completed'],
+                    ].map(([value, label]) => <button type="button" key={value} className={taskFilter === value ? styles.taskFilterActive : ''} aria-pressed={taskFilter === value} onClick={() => setTaskFilter(value)}>{label}</button>)}
+                  </nav>
+                )}
                 {tasksError ? (
                   <div className={styles.inlineError} role="status">{tasksError}</div>
                 ) : tasks.length === 0 ? (
-                  <div className={styles.emptyTasks}>
-                    <FolderKanban size={20} />
-                    <strong>No tasks in this project</strong>
-                    <span>Tasks added to the project will appear here.</span>
-                  </div>
+                  <div className={styles.emptyTasks}><FolderKanban size={20} /><strong>No tasks in this project</strong><span>Tasks added to the project will appear here.</span></div>
+                ) : filteredTasks.length === 0 ? (
+                  <div className={styles.emptyTasks}><FolderKanban size={20} /><strong>No tasks match this filter</strong><span>Choose another view to see more project work.</span></div>
                 ) : (
                   <div className={styles.taskGroups}>
                     {taskGroups.map((group) => (
@@ -302,27 +591,121 @@ export default function ProjectDetail() {
                 )}
                 <section className={styles.discussionSection}>
                   <div className={styles.sectionHeading}>
-                    <div>
-                      <span className={styles.sectionEyebrow}>Conversation</span>
-                      <h2>Recent discussion</h2>
-                    </div>
+                    <div><span className={styles.sectionEyebrow}>Conversation</span><h2>Recent discussion</h2></div>
                     <span className={styles.discussionHint}>On recently updated tasks</span>
                   </div>
                   <RecentDiscussion comments={discussion} error={discussionError} />
                 </section>
               </section>
-
               <aside className={styles.membersSection}>
                 <div className={styles.sectionHeading}>
-                  <div>
-                    <span className={styles.sectionEyebrow}>People</span>
-                    <h2>Project team</h2>
-                  </div>
+                  <div><span className={styles.sectionEyebrow}>People</span><h2>Project team</h2></div>
                   {!membersError && <span className={styles.taskTotal}>{members.length}</span>}
                 </div>
                 <ProjectMembers members={members} error={membersError} />
+                <section className={styles.activitySection}>
+                  <div className={styles.sectionHeading}><div><span className={styles.sectionEyebrow}>What changed</span><h2>Recent activity</h2></div></div>
+                  <ActivityFeed items={activity} tasks={tasks} error={activityError} />
+                </section>
               </aside>
-            </div>
+            </div>}
+
+            {activeTab === 'BACKLOG' && <section className={styles.workspacePanel} id="project-panel-backlog" role="tabpanel" aria-labelledby="project-tab-backlog">
+              <div className={styles.sectionHeading}>
+                <div><span className={styles.sectionEyebrow}>Unscheduled work</span><h2>Backlog</h2></div>
+                <span className={styles.taskTotal}>{backlogTasks.length} tasks</span>
+              </div>
+              <div className={styles.backlogFilters}>
+                <input type="search" value={backlogSearch} onChange={(event) => setBacklogSearch(event.target.value)} placeholder="Search backlog" aria-label="Search backlog" />
+                <select value={backlogPriority} onChange={(event) => setBacklogPriority(event.target.value)} aria-label="Filter backlog by priority">
+                  <option value="ALL">All priorities</option>
+                  {Object.entries(PRIORITY).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                </select>
+                <select value={backlogStatus} onChange={(event) => setBacklogStatus(event.target.value)} aria-label="Filter backlog by status">
+                  <option value="ALL">All statuses</option>
+                  {Object.entries(TASK_STATUS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                </select>
+              </div>
+              {sprintActionError && <p className={styles.inlineError} role="alert">{sprintActionError}</p>}
+              {tasksError ? <p className={styles.inlineError}>{tasksError}</p> : backlogTasks.length ? (
+                <ul className={styles.backlogList}>
+                  {backlogTasks.map((task) => (
+                    <li key={task.id}>
+                      <NavLink to={`/tasks/${task.id}`}><span className={`${styles.backlogPriority} ${styles[`priority${task.priority}`]}`}><i />{PRIORITY[task.priority] || task.priority}</span><strong>{task.title}</strong><small>{fullName(task.assigned_to)} · {TASK_STATUS[task.status] || task.status}</small></NavLink>
+                      {(canManageSprints || String(task.assigned_to?.id) === String(user?.id)) && (
+                        <select value="" onChange={(event) => moveTask(task, event.target.value)} aria-label={`Move ${task.title} to sprint`}>
+                          <option value="">Move to sprint…</option>
+                          {sprints.filter((sprint) => sprint.status !== 'COMPLETED').map((sprint) => <option key={sprint.id} value={sprint.id}>{sprint.name}</option>)}
+                        </select>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              ) : <div className={styles.emptyTasks}><FolderKanban size={20} /><strong>{tasks.length ? 'No backlog tasks match these filters' : 'The backlog is clear'}</strong><span>Unassigned-sprint project tasks will appear here.</span></div>}
+            </section>}
+
+            {activeTab === 'SPRINTS' && <section className={styles.workspacePanel} id="project-panel-sprints" role="tabpanel" aria-labelledby="project-tab-sprints">
+              <div className={styles.sectionHeading}>
+                <div><span className={styles.sectionEyebrow}>Iterations</span><h2>Project sprints</h2></div>
+                <span className={styles.taskTotal}>{sprints.length} sprints</span>
+              </div>
+              {sprintActionError && <p className={styles.inlineError} role="alert">{sprintActionError}</p>}
+              {sprints.length ? <div className={styles.sprintList}>
+                {sprints.map((sprint) => {
+                  const sprintTasks = tasks.filter((task) => String(task.sprint?.id) === String(sprint.id));
+                  const complete = sprintTasks.filter((task) => task.status === 'COMPLETED').length;
+                  const blocked = sprintTasks.filter((task) => task.status === 'BLOCKED').length;
+                  const percent = sprintTasks.length ? Math.round((complete / sprintTasks.length) * 100) : 0;
+                  return <article className={styles.sprintCard} key={sprint.id}>
+                    <div className={styles.sprintHeading}>
+                      <div><span className={styles.sectionEyebrow}>Sprint</span><h3>{sprint.name}</h3></div>
+                      <span className={`${styles.sprintStatus} ${styles[`sprint${sprint.status}`]}`}>{sprint.status.toLowerCase()}</span>
+                    </div>
+                    <p className={styles.sprintDates}>{formatDate(sprint.start_date)} — {formatDate(sprint.end_date)}</p>
+                    <p className={styles.sprintGoal}>{sprint.goal || 'No sprint goal has been added.'}</p>
+                    <div className={styles.sprintProgress}><span style={{ width: `${percent}%` }} /></div>
+                    <div className={styles.sprintStats}>
+                      <span><strong>{sprintTasks.length}</strong> tasks</span>
+                      <span><strong>{complete}</strong> completed</span>
+                      <span><strong>{sprintTasks.length - complete}</strong> remaining</span>
+                      <span className={blocked ? styles.blockedCount : ''}><strong>{blocked}</strong> blocked</span>
+                    </div>
+                    {sprintTasks.length > 0 && <details className={styles.sprintTasks}>
+                      <summary>View sprint tasks</summary>
+                      {sprintTasks.map((task) => <div key={task.id} className={styles.sprintTaskRow}><NavLink to={`/tasks/${task.id}`}>{task.title}<small>{TASK_STATUS[task.status] || task.status}</small></NavLink>{(canManageSprints || String(task.assigned_to?.id) === String(user?.id)) && <button type="button" onClick={() => moveTask(task, '')}>Move to backlog</button>}</div>)}
+                    </details>}
+                    {canManageSprints && <div className={styles.sprintActions}>
+                      <button type="button" onClick={() => editSprint(sprint)}>Edit</button>
+                      {sprint.status === 'PLANNED' && <button type="button" onClick={() => changeSprintStatus(sprint, 'start')}>Start sprint</button>}
+                      {sprint.status === 'ACTIVE' && <button type="button" onClick={() => changeSprintStatus(sprint, 'complete')}>Complete sprint</button>}
+                    </div>}
+                  </article>;
+                })}
+              </div> : <div className={styles.emptyTasks}><FolderKanban size={20} /><strong>No sprints yet</strong><span>Plan an iteration for this project’s upcoming work.</span></div>}
+              {canManageSprints && <details className={styles.sprintFormDetails} open={sprintFormOpen} onToggle={(event) => setSprintFormOpen(event.currentTarget.open)}>
+                <summary><Plus size={14} /> {editingSprintId ? 'Edit sprint' : 'Create sprint'}</summary>
+                <form onSubmit={handleSaveSprint} className={styles.sprintForm}>
+                  <label>Name<input required maxLength={255} value={sprintForm.name} onChange={(event) => setSprintForm((form) => ({ ...form, name: event.target.value }))} /></label>
+                  <label>Goal<textarea rows={2} value={sprintForm.goal} onChange={(event) => setSprintForm((form) => ({ ...form, goal: event.target.value }))} /></label>
+                  <label>Start date<input required type="date" value={sprintForm.start_date} onChange={(event) => setSprintForm((form) => ({ ...form, start_date: event.target.value }))} /></label>
+                  <label>End date<input required type="date" value={sprintForm.end_date} onChange={(event) => setSprintForm((form) => ({ ...form, end_date: event.target.value }))} /></label>
+                  {sprintError && <p className={styles.inlineError} role="alert">{sprintError}</p>}
+                  <div><button type="submit" disabled={sprintSaving}>{sprintSaving ? 'Saving…' : editingSprintId ? 'Save changes' : 'Create sprint'}</button>{editingSprintId && <button type="button" onClick={() => { setEditingSprintId(null); setSprintForm({ name: '', goal: '', start_date: '', end_date: '' }); setSprintFormOpen(false); }}>Cancel</button>}</div>
+                </form>
+              </details>}
+            </section>}
+
+            {activeTab === 'TASKS' && <section className={styles.workspacePanel} id="project-panel-tasks" role="tabpanel" aria-labelledby="project-tab-tasks">
+              <div className={styles.sectionHeading}><div><span className={styles.sectionEyebrow}>Delivery</span><h2>Project tasks</h2></div><span className={styles.taskTotal}>{tasks.length} total</span></div>
+              {!tasksError && <nav className={styles.taskFilters} aria-label="Filter project tasks">{[['ALL', 'All'], ['MINE', `Assigned to me · ${myTaskCount}`], ['DUE_SOON', 'Due soon'], ['OVERDUE', 'Overdue'], ['COMPLETED', 'Completed']].map(([value, label]) => <button type="button" key={value} className={taskFilter === value ? styles.taskFilterActive : ''} aria-pressed={taskFilter === value} onClick={() => setTaskFilter(value)}>{label}</button>)}</nav>}
+              {tasksError ? <p className={styles.inlineError}>{tasksError}</p> : <div className={styles.taskGroups}>{taskGroups.map((group) => <section className={styles.taskGroup} key={group.key}><h3>{group.label}<span>{group.tasks.length}</span></h3>{group.tasks.map((task) => <TaskRow key={task.id} task={task} />)}</section>)}</div>}
+            </section>}
+
+            {activeTab === 'ACTIVITY' && <section className={styles.workspacePanel} id="project-panel-activity" role="tabpanel" aria-labelledby="project-tab-activity">
+              <div className={styles.sectionHeading}><div><span className={styles.sectionEyebrow}>Project history</span><h2>Recent activity</h2></div></div>
+              <ActivityFeed items={activity} tasks={tasks} error={activityError} />
+              <section className={styles.discussionSection}><div className={styles.sectionHeading}><div><span className={styles.sectionEyebrow}>Conversation</span><h2>Recent discussion</h2></div></div><RecentDiscussion comments={discussion} error={discussionError} /></section>
+            </section>}
           </>
         ) : null}
       </div>

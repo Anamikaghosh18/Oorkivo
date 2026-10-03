@@ -8,39 +8,69 @@
   --color-surface-raised:   #EEEAE1; /* Soft Stone */
   --color-border:           #D9D5CC; /* Warm Gray */
   --color-border-subtle:    #E5E2DA;
+  --border:                 var(--color-border);
+  --surface:                var(--color-surface);
 
-  --color-text-primary:     #252823; /* Deep Charcoal */
-  --color-text-secondary:   #555952; /* Soft Charcoal */
-  --color-text-tertiary:    #737A76; /* Slate */
+  --color-text-primary:     #292C27; /* Charcoal */
+  --color-text-secondary:   #73766F; /* Warm Grey */
+  --color-text-tertiary:    #85877F;
+  --charcoal:               var(--color-text-primary);
+  --muted:                  var(--color-text-secondary);
+  --text-muted:             var(--color-text-secondary);
+  --text-primary:           var(--color-text-primary);
+  --text-secondary:         var(--color-text-secondary);
+  --page-bg:                var(--color-bg);
 
   /* ── Brand Accents (Moss) ── */
-  --color-sage-dark:        #465444; /* Deep Moss */
-  --color-sage:             #64745F; /* Moss */
-  --color-sage-mid:         #899583; /* Sage */
-  --color-sage-light:       #B2B9AA; /* Soft Sage */
-  --color-sage-hover:       #465444;
+  --color-sage-dark:        #536451; /* Deep Moss */
+  --color-sage:             #899583; /* Sage */
+  --color-sage-mid:         #899583;
+  --color-sage-light:       #E9EDE7;
+  --color-sage-hover:       #465644;
+  --color-moss:             #536451;
+  --moss:                   var(--color-moss);
 
   /* ── Sidebar ── */
   --color-sidebar-bg:       #292C27;
-  --color-sidebar-active:   #3E493D;
+  --color-sidebar-active:   #3C473B;
   --color-sidebar-text:     #D9DDD4;
   --color-sidebar-muted:    #9DA49A;
   --color-sidebar-border:   #3A3E38;
 
   /* ── Supporting Tones ── */
-  --color-clay:             #B69D89; /* Muted Clay */
+  --color-clay:             #A9826B; /* Warm Clay */
+  --color-clay-bg:          #F0E5DD;
   --color-sand:             #D8CBB9; /* Warm Sand */
-  --color-rose:             #B99F9B; /* Dusty Rose */
-  --color-amber:            #B49A69; /* Muted Amber */
-  --color-slate:            #737A76; /* Slate */
+  --color-rose:             #A76561; /* Dusty Rose */
+  --color-rose-bg:          #F3E4E1;
+  --color-amber:            #B58A52;
+  --color-amber-bg:         #F3E9D8;
+  --color-slate:            #667B86;
+  --color-slate-bg:         #E8EEF0;
+  --color-plum:             #806B78;
+  --color-plum-bg:          #EEE7EB;
 
   /* ── Semantic Mappings ── */
   --color-success:          var(--color-sage-dark);
-  --color-success-bg:       #EAECE7;
+  --color-success-bg:       #E9EDE7;
   --color-warning:          var(--color-amber);
-  --color-warning-bg:       #F6F2EB;
+  --color-warning-bg:       var(--color-amber-bg);
   --color-danger:           var(--color-rose);
-  --color-danger-bg:        #F6EFEE;
+  --color-danger-bg:        var(--color-rose-bg);
+  --color-info:             var(--color-slate);
+  --color-info-bg:          var(--color-slate-bg);
+  --color-status-backlog:   var(--color-text-secondary);
+  --color-status-todo:      var(--color-slate);
+  --color-status-progress:  var(--color-sage-dark);
+  --color-status-review:    var(--color-amber);
+  --color-status-done:      var(--color-sage-dark);
+  --color-status-blocked:   var(--color-rose);
+  --color-status-planned:   var(--color-plum);
+  --color-priority-low:     var(--color-text-secondary);
+  --color-priority-medium:  var(--color-amber);
+  --color-priority-high:    var(--color-clay);
+  --color-priority-urgent:  var(--color-rose);
+  --color-priority-high-bg: var(--color-clay-bg);
 
   /* ── Typography ───────────────────────────────────────────── */
   --font-family:        'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -146,7 +176,7 @@ input, textarea, select { font-family: inherit; }
 }
 
 .btn-primary {
-  background: var(--color-sage);
+  background: var(--color-sage-dark);
   color: #fff;
   border-color: var(--color-sage-dark);
 }
@@ -177,7 +207,7 @@ input, textarea, select { font-family: inherit; }
 .btn-danger {
   background: var(--color-danger-bg);
   color: var(--color-danger);
-  border-color: #e8c0c0;
+  border-color: var(--color-rose);
 }
 .btn-danger:hover {
   background: #f5dddd;
@@ -196,15 +226,15 @@ input, textarea, select { font-family: inherit; }
 }
 
 .pill-active   { background: var(--color-success-bg); color: var(--color-success); }
-.pill-planning { background: var(--color-border-subtle); color: var(--color-text-secondary); }
+.pill-planning { background: var(--color-slate-bg); color: var(--color-slate); }
 .pill-hold     { background: var(--color-warning-bg); color: var(--color-warning); }
 .pill-done     { background: var(--color-sage-light); color: var(--color-sage-dark); }
 
 /* Priority pills */
 .pill-urgent { background: var(--color-danger-bg); color: var(--color-danger); }
-.pill-high   { background: var(--color-warning-bg); color: var(--color-warning); }
-.pill-medium { background: var(--color-border-subtle); color: var(--color-text-secondary); }
-.pill-low    { background: var(--color-sage-light); color: var(--color-sage-dark); }
+.pill-high   { background: var(--color-priority-high-bg); color: var(--color-priority-high); }
+.pill-medium { background: var(--color-amber-bg); color: var(--color-priority-medium); }
+.pill-low    { background: var(--color-surface-raised); color: var(--color-priority-low); }
 
 /* Section Label */
 .section-label {
