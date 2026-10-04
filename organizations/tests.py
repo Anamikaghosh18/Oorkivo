@@ -5,6 +5,7 @@ from rest_framework.test import APIClient
 from datetime import timedelta
 
 from organizations.models import Organization, OrganizationInvitation, OrganizationMembership
+from communication.models import Activity
 from projects.models import Project
 from users.models import User
 
@@ -213,3 +214,75 @@ class OrganizationWorkspaceTests(TestCase):
         self.assertEqual(already_member_response.status_code, 400)
         active_invitation = OrganizationInvitation.objects.get(pk=active_invite.data['id'])
         self.assertEqual(active_invitation.status, OrganizationInvitation.Status.PENDING)
+
+    def test_organization_activity_lists_accessible_project_events(self):
+        organization = Organization.objects.create(name='Activity org', owner=self.owner)
+        OrganizationMembership.objects.create(
+            user=self.owner,
+            organization=organization,
+            access_level=OrganizationMembership.AccessLevel.OWNER,
+        )
+        project = Project.objects.create(organization=organization, name='Visible project')
+        Activity.objects.create(
+            project=project,
+            actor=self.owner,
+            action=Activity.ActionTypes.CREATED,
+            details={'title': 'Kickoff'},
+        )
+        self.client.credentials(HTTP_X_ORGANIZATION_ID=str(organization.id))
+
+        response = self.client.get(reverse('organization-activity', kwargs={'pk': organization.id}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]['project_name'], 'Visible project')
+        self.assertEqual(response.data[0]['action'], Activity.ActionTypes.CREATED)
+
+    def test_regular_member_can_list_only_current_organization_members(self):
+        organization = Organization.objects.create(name='Member list org', owner=self.owner)
+        OrganizationMembership.objects.create(
+            user=self.owner,
+            organization=organization,
+            access_level=OrganizationMembership.AccessLevel.OWNER,
+        )
+        OrganizationMembership.objects.create(
+            user=self.member,
+            organization=organization,
+            access_level=OrganizationMembership.AccessLevel.MEMBER,
+        )
+        other_organization = Organization.objects.create(name='Private org')
+        OrganizationMembership.objects.create(
+            user=self.owner,
+            organization=other_organization,
+            access_level=OrganizationMembership.AccessLevel.MEMBER,
+        )
+        self.client.force_authenticate(self.member)
+        self.client.credentials(HTTP_X_ORGANIZATION_ID=str(organization.id))
+
+        response = self.client.get(f'/api/organizations/{organization.id}/members/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual({row['user']['id'] for row in response.data}, {self.owner.id, self.member.id})
+
+    def test_regular_member_cannot_add_organization_members(self):
+        organization = Organization.objects.create(name='Protected members org', owner=self.owner)
+        OrganizationMembership.objects.create(
+            user=self.owner,
+            organization=organization,
+            access_level=OrganizationMembership.AccessLevel.OWNER,
+        )
+        OrganizationMembership.objects.create(
+            user=self.member,
+            organization=organization,
+            access_level=OrganizationMembership.AccessLevel.MEMBER,
+        )
+        self.client.force_authenticate(self.member)
+        self.client.credentials(HTTP_X_ORGANIZATION_ID=str(organization.id))
+
+        response = self.client.post(
+            f'/api/organizations/{organization.id}/members/',
+            {'user_id': self.member.id, 'access_level': 'MEMBER'},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 403)

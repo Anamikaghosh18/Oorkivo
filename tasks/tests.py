@@ -4,7 +4,7 @@ from django.test import TestCase, override_settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 from tempfile import TemporaryDirectory
 
-from communication.models import Activity
+from communication.models import Activity, Notification
 from communication.models import TaskComment
 from organizations.models import Organization, OrganizationMembership
 from projects.models import Project, ProjectMembership
@@ -63,6 +63,104 @@ class MemberTaskWorkflowTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.task.refresh_from_db()
         self.assertEqual(self.task.assigned_to_id, self.user.id)
+
+    def test_task_creation_rejects_assignee_outside_organization(self):
+        manager_membership = ProjectMembership.objects.get(project=self.project, user=self.user)
+        manager_membership.role = ProjectMembership.ProjectRole.MANAGER
+        manager_membership.save()
+        outside_user = User.objects.create_user(
+            username='outside', email='outside@example.com', password='password'
+        )
+
+        response = self.client.post(
+            f'/api/projects/{self.project.id}/tasks/',
+            {'title': 'Cross-organization assignment', 'assigned_to': outside_user.id},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('assigned_to', response.data)
+
+    def test_task_creation_rejects_organization_member_not_associated_with_project(self):
+        manager_membership = ProjectMembership.objects.get(project=self.project, user=self.user)
+        manager_membership.role = ProjectMembership.ProjectRole.MANAGER
+        manager_membership.save()
+
+        response = self.client.post(
+            f'/api/projects/{self.project.id}/tasks/',
+            {'title': 'Ineligible project assignment', 'assigned_to': self.other_user.id},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('assigned_to', response.data)
+
+    def test_task_creation_rejects_project_viewer_as_assignee(self):
+        manager_membership = ProjectMembership.objects.get(project=self.project, user=self.user)
+        manager_membership.role = ProjectMembership.ProjectRole.MANAGER
+        manager_membership.save()
+        viewer = User.objects.create_user(
+            username='viewer', email='viewer@example.com', password='password'
+        )
+        OrganizationMembership.objects.create(user=viewer, organization=self.organization)
+        ProjectMembership.objects.create(
+            project=self.project,
+            user=viewer,
+            role=ProjectMembership.ProjectRole.VIEWER,
+        )
+
+        response = self.client.post(
+            f'/api/projects/{self.project.id}/tasks/',
+            {'title': 'Assignment for a viewer', 'assigned_to': viewer.id},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('assigned_to', response.data)
+
+    def test_task_creation_notifies_an_eligible_project_member(self):
+        manager_membership = ProjectMembership.objects.get(project=self.project, user=self.user)
+        manager_membership.role = ProjectMembership.ProjectRole.MANAGER
+        manager_membership.save()
+        assignee = User.objects.create_user(
+            username='eligible', email='eligible@example.com', password='password'
+        )
+        OrganizationMembership.objects.create(user=assignee, organization=self.organization)
+        ProjectMembership.objects.create(project=self.project, user=assignee)
+
+        response = self.client.post(
+            f'/api/projects/{self.project.id}/tasks/',
+            {'title': 'Eligible assignment', 'assigned_to': assignee.id},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertTrue(Notification.objects.filter(
+            recipient=assignee,
+            type=Notification.NotificationTypes.TASK_ASSIGNED,
+            task_id=response.data['id'],
+        ).exists())
+
+    def test_organization_admin_can_archive_task_and_preserve_completed_status(self):
+        admin = User.objects.create_user(
+            username='task-admin', email='task-admin@example.com', password='password'
+        )
+        OrganizationMembership.objects.create(
+            user=admin,
+            organization=self.organization,
+            access_level=OrganizationMembership.AccessLevel.ADMIN,
+        )
+        self.task.status = Task.Status.COMPLETED
+        self.task.save()
+        self.client.force_authenticate(admin)
+        self.client.credentials(HTTP_X_ORGANIZATION_ID=str(self.organization.id))
+
+        response = self.client.delete(reverse('task-detail', kwargs={'pk': self.task.id}))
+
+        self.assertEqual(response.status_code, 204)
+        self.task.refresh_from_db()
+        self.assertTrue(self.task.is_archived)
+        self.assertEqual(self.task.status, Task.Status.COMPLETED)
 
     def test_assignee_can_create_subtask(self):
         response = self.client.post(

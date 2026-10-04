@@ -20,7 +20,6 @@ const NAV_PRIMARY = [
 ];
 
 const NAV_SECONDARY = [
-  { to: '/members',  icon: UserRound, label: 'Members' },
   { to: '/activity', icon: Activity,  label: 'Activity' },
 ];
 

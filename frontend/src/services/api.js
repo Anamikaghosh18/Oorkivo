@@ -68,6 +68,8 @@ export const organizationsApi = {
   list:     ()   => apiClient.get('/organizations/'),
   get:      (id) => apiClient.get(`/organizations/${id}/`),
   members:  (id) => apiClient.get(`/organizations/${id}/members/`),
+  updateMember: (organizationId, membershipId, data) => apiClient.patch(`/organizations/${organizationId}/members/${membershipId}/`, data),
+  removeMember: (organizationId, membershipId) => apiClient.delete(`/organizations/${organizationId}/members/${membershipId}/`),
   update:   (id, data) => apiClient.patch(`/organizations/${id}/`, data, data instanceof FormData
     ? { headers: { 'Content-Type': 'multipart/form-data' } }
     : undefined),
@@ -78,11 +80,19 @@ export const organizationsApi = {
   teams:    (id) => apiClient.get(`/organizations/${id}/teams/`),
   createTeam: (id, data) => apiClient.post(`/organizations/${id}/teams/`, data),
   projects: (id) => apiClient.get(`/organizations/${id}/projects/`),
+  activity: (id) => apiClient.get(`/organizations/${id}/activity/`),
 };
 
 // ─── Teams ──────────────────────────────────────────────────────
 export const teamsApi = {
+  get: (id) => apiClient.get(`/teams/${id}/`),
+  update: (id, data) => apiClient.patch(`/teams/${id}/`, data),
+  archive: (id) => apiClient.delete(`/teams/${id}/`),
+  restore: (id) => apiClient.post(`/teams/${id}/restore/`),
   members: (id) => apiClient.get(`/teams/${id}/members/`),
+  addMember: (id, data) => apiClient.post(`/teams/${id}/members/`, data),
+  updateMember: (id, memberId, data) => apiClient.patch(`/teams/${id}/members/${memberId}/`, data),
+  removeMember: (id, memberId) => apiClient.delete(`/teams/${id}/members/${memberId}/`),
 };
 
 // ─── Projects ─────────────────────────────────────────────────────
@@ -92,7 +102,10 @@ export const projectsApi = {
   create:  (data)       => apiClient.post('/projects/', data),
   update:  (id, data)   => apiClient.patch(`/projects/${id}/`, data),
   delete:  (id)         => apiClient.delete(`/projects/${id}/`),
+  restore: (id)         => apiClient.post(`/projects/${id}/restore/`),
   members: (id)         => apiClient.get(`/projects/${id}/members/`),
+  addMember: (id, data) => apiClient.post(`/projects/${id}/members/`, data),
+  removeMember: (id, memberId) => apiClient.delete(`/projects/${id}/members/${memberId}/`),
   tasks:   (id, params) => apiClient.get(`/projects/${id}/tasks/`, { params }),
   milestones: (id)      => apiClient.get(`/projects/${id}/milestones/`),
   createMilestone: (id, data) => apiClient.post(`/projects/${id}/milestones/`, data),
@@ -115,6 +128,7 @@ export const tasksApi = {
   create:     (projectId, data)   => apiClient.post(`/projects/${projectId}/tasks/`, data),
   update:     (id, data)          => apiClient.patch(`/tasks/${id}/`, data),
   delete:     (id)                => apiClient.delete(`/tasks/${id}/`),
+  restore:    (id)                => apiClient.post(`/tasks/${id}/restore/`),
   comments:   (id)                => apiClient.get(`/tasks/${id}/comments/`),
   addComment: (id, data)          => apiClient.post(`/tasks/${id}/comments/`, data),
   activity:   (id)                => apiClient.get(`/tasks/${id}/activity/`),

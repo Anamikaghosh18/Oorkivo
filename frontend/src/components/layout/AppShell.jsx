@@ -36,7 +36,7 @@ export default function AppShell({ children, org, user }) {
   return (
     <div className={`${styles.shell} ${collapsed ? styles.shellCollapsed : ''}`}>
       <Sidebar collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} />
-      <Topbar org={org} user={user} />
+      <Topbar org={org} user={user} collapsed={collapsed} />
       <main className={styles.main}>
         {children}
       </main>

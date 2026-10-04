@@ -283,6 +283,72 @@
   font-size: var(--font-size-xs);
 }
 
+.welcomeBanner {
+  position: relative;
+  overflow: hidden;
+  min-height: 164px;
+  padding: var(--space-6) var(--space-7);
+  border: 0;
+  background: rgba(240, 229, 221, 0.28);
+}
+
+.bannerArt { opacity: .82; }
+.overview {
+  border-top: 1px solid var(--color-border-subtle);
+  border-bottom: 1px solid var(--color-border-subtle);
+  border-radius: 0;
+  background: rgba(255, 253, 248, 0.32);
+  box-shadow: none;
+}
+
+.projectsSection { padding-top: var(--space-2); }
+.projectList {
+  overflow: visible;
+  border: 0;
+  border-top: 1px solid var(--color-border);
+  border-radius: 0;
+  background: transparent;
+}
+
+.projectRow {
+  min-height: 88px;
+  padding-inline: var(--space-4);
+}
+
+.projectRow:hover {
+  padding-inline: var(--space-4);
+  background: var(--color-surface-raised);
+}
+
+.sectionEmpty {
+  min-height: 84px;
+  padding: var(--space-4);
+  border: 0;
+  border-radius: 0;
+  background: rgba(238, 234, 225, 0.2);
+}
+
+.lowerGrid { gap: var(--space-6); }
+.activitySection,
+.upcomingSection {
+  padding: var(--space-4) 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.activityList::before { background: var(--color-border); }
+.activityDot { background: var(--color-bg); }
+.upcomingList {
+  overflow: hidden;
+  border: 0;
+  border-top: 1px solid var(--color-border-subtle);
+  border-radius: 0;
+  background: transparent;
+}
+
+.upcomingList a:hover { background: var(--color-slate-bg); }
+
 .projectArrow {
   flex: 0 0 auto;
   color: var(--color-text-tertiary);
@@ -456,7 +522,7 @@
   .welcomeBanner {
     min-height: 130px;
     gap: var(--space-3);
-    padding-inline: 0;
+    padding: var(--space-4);
   }
 
   .heading { font-size: 28px; }
@@ -466,4 +532,11 @@
   .overviewMetrics { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: var(--space-4); }
   .overviewMetric:nth-child(3) { padding-left: 0; border-left: 0; }
   .projectMeta { flex-wrap: wrap; gap: var(--space-1) var(--space-3); }
+  .activitySection,
+  .upcomingSection { padding: var(--space-4); }
+}
+
+.projectRow:hover {
+  padding-inline: var(--space-4);
+  background: var(--color-surface-raised);
 }

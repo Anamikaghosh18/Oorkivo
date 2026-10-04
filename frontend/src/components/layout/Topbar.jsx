@@ -17,7 +17,7 @@ function formatTime(value) {
   return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(date);
 }
 
-export default function Topbar({ org, user }) {
+export default function Topbar({ org, user, collapsed = false }) {
   const [searchFocused, setSearchFocused] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
@@ -80,7 +80,7 @@ export default function Topbar({ org, user }) {
   };
 
   return (
-    <header className={styles.topbar}>
+    <header className={styles.topbar} data-collapsed={collapsed ? 'true' : 'false'}>
       {/* Current organization */}
       <div className={styles.orgMenuWrap}>
         <button

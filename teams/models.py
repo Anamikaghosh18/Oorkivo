@@ -6,6 +6,8 @@ from organizations.models import Organization, OrganizationMembership
 class Team(models.Model):
     organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name='teams')
     name = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    is_archived = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

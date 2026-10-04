@@ -128,7 +128,12 @@ class AcceptOrganizationInvitationView(APIView):
             if not created:
                 if membership.is_active and membership.status == OrganizationMembership.Status.ACTIVE:
                     raise ValidationError({'token': 'You are already a member of this organization.'})
-                raise ValidationError({'token': 'An existing inactive membership requires an administrator.'})
+                if membership.status != OrganizationMembership.Status.REMOVED:
+                    raise ValidationError({'token': 'An existing inactive membership requires an administrator.'})
+                membership.access_level = invitation.access_level
+                membership.is_active = True
+                membership.status = OrganizationMembership.Status.ACTIVE
+                membership.save(update_fields=['access_level', 'is_active', 'status'])
             invitation.status = OrganizationInvitation.Status.ACCEPTED
             invitation.accepted_at = timezone.now()
             invitation.save(update_fields=['status', 'accepted_at'])

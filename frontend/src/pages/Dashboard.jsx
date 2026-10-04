@@ -1,4 +1,4 @@
-import { Navigate, NavLink } from 'react-router-dom';
+import { Navigate, NavLink, useLocation } from 'react-router-dom';
 import { ArrowUpRight, CalendarDays, CheckCircle2, FolderKanban } from 'lucide-react';
 import AppShell from '../components/layout/AppShell';
 import { useDashboard } from '../hooks/useDashboard';
@@ -70,6 +70,8 @@ function DashboardIllustration() {
 }
 
 export default function Dashboard() {
+  const location = useLocation();
+  const overlayState = { backgroundLocation: location };
   const {
     projects, tasks, activity, user, org, loading, error,
     taskDataError, activityError,
@@ -149,7 +151,7 @@ export default function Dashboard() {
                 const counts = getTaskCounts(tasks, project.id);
                 const progress = counts.total ? Math.round((counts.completed / counts.total) * 100) : 0;
                 return (
-                  <NavLink className={styles.projectRow} to={`/projects/${project.id}`} key={project.id}>
+                  <NavLink className={styles.projectRow} to={`/projects/${project.id}`} state={overlayState} key={project.id}>
                     <ProjectMark name={project.name} />
                     <div className={styles.projectMain}>
                       <div className={styles.projectTitleLine}>
@@ -222,7 +224,7 @@ export default function Dashboard() {
               <ul className={styles.upcomingList}>
                 {upcomingTasks.map((task) => (
                   <li key={task.id}>
-                    <NavLink to={`/tasks/${task.id}`}>
+                    <NavLink to={`/tasks/${task.id}`} state={overlayState}>
                       <span className={styles.deadlineDate}>{formatDate(task.due_date)}</span>
                       <span className={styles.deadlineTask}>
                         <strong>{task.title}</strong>

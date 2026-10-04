@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import Project, ProjectMembership, ProjectMilestone, Sprint
+from organizations.models import OrganizationMembership
 from organizations.serializers import UserMinimalSerializer
 from users.models import User
 from tasks.models import Task
@@ -15,15 +16,43 @@ class ProjectMembershipSerializer(serializers.ModelSerializer):
         fields = ['id', 'user', 'user_id', 'project', 'role', 'joined_at']
         read_only_fields = ['project', 'joined_at']
 
+    def validate(self, attrs):
+        user = attrs.get('user')
+        project = self.context.get('project') or getattr(self.instance, 'project', None)
+        if user and project and not OrganizationMembership.objects.filter(
+            user=user,
+            organization=project.organization,
+            is_active=True,
+            status=OrganizationMembership.Status.ACTIVE,
+        ).exists():
+            raise serializers.ValidationError({
+                'user_id': 'The selected user must be an active member of this project’s organization.'
+            })
+        return attrs
+
+
 class ProjectSerializer(serializers.ModelSerializer):
     class Meta:
         model = Project
         fields = [
-            'id', 'organization', 'team', 'name', 'description', 
-            'status', 'start_date', 'target_end_date', 'actual_end_date', 
-            'created_at', 'updated_at'
+            'id', 'organization', 'team', 'name', 'description',
+            'status', 'start_date', 'target_end_date', 'actual_end_date',
+            'is_archived', 'created_at', 'updated_at',
         ]
-        read_only_fields = ['organization', 'created_at', 'updated_at']
+        read_only_fields = ['organization', 'is_archived', 'created_at', 'updated_at']
+
+    def validate(self, attrs):
+        team = attrs.get('team', getattr(self.instance, 'team', None))
+        organization = getattr(self.instance, 'organization', None) or self.context.get('organization')
+        if team and organization and team.organization_id != organization.id:
+            raise serializers.ValidationError({'team': 'Team must belong to the same organization as the project.'})
+        if team and team.is_archived:
+            raise serializers.ValidationError({'team': 'Archived teams cannot be assigned to projects.'})
+        start = attrs.get('start_date', getattr(self.instance, 'start_date', None))
+        end = attrs.get('target_end_date', getattr(self.instance, 'target_end_date', None))
+        if start and end and end < start:
+            raise serializers.ValidationError({'target_end_date': 'End date must be on or after the start date.'})
+        return attrs
 
 
 class ProjectMilestoneSerializer(serializers.ModelSerializer):

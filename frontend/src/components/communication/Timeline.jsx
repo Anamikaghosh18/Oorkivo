@@ -177,12 +177,14 @@ function CommentInput({ onSubmit, currentUser }) {
 }
 
 /* ── Timeline (main export) ────────────────────────────────── */
-export default function Timeline({ items, currentUserId, currentUser, onAddComment, onDeleteComment, onUpdateComment }) {
+export default function Timeline({ items, currentUserId, currentUser, onAddComment, onDeleteComment, onUpdateComment, embedded = false }) {
   return (
-    <div className={styles.timeline}>
-      <div className={styles.header}>
-        <h3 className={styles.title}>Discussion</h3>
-      </div>
+    <div className={`${styles.timeline} ${embedded ? styles.timelineEmbedded : ''}`}>
+      {!embedded && (
+        <div className={styles.header}>
+          <h3 className={styles.title}>Discussion</h3>
+        </div>
+      )}
 
       <div className={styles.feed}>
         {items.length === 0 && (

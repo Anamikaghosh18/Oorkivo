@@ -1,8 +1,10 @@
-import { useMemo, useState } from 'react';
-import { NavLink } from 'react-router-dom';
-import { ArrowDownUp, CalendarDays, Check, FolderKanban, MoreHorizontal, Plus, Search, X } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
+import { ArrowDownUp, CalendarDays, Check, FolderKanban, MoreHorizontal, Pencil, Plus, Search, X } from 'lucide-react';
 import AppShell from '../components/layout/AppShell';
 import DropdownSelect from '../components/DropdownSelect';
+import OrganizationMemberSelector from '../components/OrganizationMemberSelector';
+import { organizationsApi, projectsApi } from '../services/api';
 import { useProjects } from '../hooks/useProjects';
 import styles from './Projects.module.css';
 
@@ -57,7 +59,7 @@ function MemberAvatars({ members }) {
   );
 }
 
-function ProjectMenu({ project, onDelete }) {
+function ProjectMenu({ project, canManage, onEdit, onArchive, linkState }) {
   const [open, setOpen] = useState(false);
   return (
     <div className={styles.menuWrap}>
@@ -72,15 +74,18 @@ function ProjectMenu({ project, onDelete }) {
       </button>
       {open && (
         <div className={styles.menu}>
-          <NavLink to={`/projects/${project.id}`} onClick={() => setOpen(false)}>Open project</NavLink>
-          <button type="button" className={styles.deleteAction} onClick={() => { setOpen(false); onDelete(project.id); }}>Delete project</button>
+          <NavLink to={`/projects/${project.id}`} state={linkState} onClick={() => setOpen(false)}>Open project</NavLink>
+          {canManage && <>
+            <button type="button" onClick={() => { setOpen(false); onEdit(project); }}><Pencil size={13} /> Edit project</button>
+            <button type="button" className={styles.deleteAction} onClick={() => { setOpen(false); onArchive(project.id); }}>Archive project</button>
+          </>}
         </div>
       )}
     </div>
   );
 }
 
-function ProjectRow({ project, teamName, onDelete }) {
+function ProjectRow({ project, teamName, canManage, onEdit, onArchive, linkState }) {
   const status = STATUS_META[project.status] ?? { label: project.status, className: 'planning' };
   const tasks = project.tasks;
   const completed = tasks?.filter((task) => task.status === 'COMPLETED').length ?? 0;
@@ -90,7 +95,7 @@ function ProjectRow({ project, teamName, onDelete }) {
 
   return (
     <article className={styles.projectRow}>
-      <NavLink className={styles.projectLink} to={`/projects/${project.id}`}>
+      <NavLink className={styles.projectLink} to={`/projects/${project.id}`} state={linkState}>
         <ProjectMark project={project} />
         <div className={styles.projectContent}>
           <div className={styles.projectTopline}>
@@ -128,25 +133,58 @@ function ProjectRow({ project, teamName, onDelete }) {
 
       <div className={styles.projectAside}>
         <MemberAvatars members={project.members} />
-        <ProjectMenu project={project} onDelete={onDelete} />
+        <ProjectMenu project={project} canManage={canManage} onEdit={onEdit} onArchive={onArchive} linkState={linkState} />
       </div>
     </article>
   );
 }
 
 export default function Projects() {
-  const { projects, teams, teamsError, org, user, loading, error, reload, createProject, deleteProject } = useProjects();
+  const location = useLocation();
+  const projectLinkState = { backgroundLocation: location };
+  const { projects, teams, teamsError, org, user, loading, error, reload, createProject, updateProject, deleteProject } = useProjects();
+  const canCreateProjects = Boolean(org?.permissions?.can_manage_members);
+  const canInviteMembers = Boolean(org?.permissions?.can_manage_members);
+  const canInviteAdmins = Boolean(org?.permissions?.can_manage_organization);
+  const [organizationMembers, setOrganizationMembers] = useState([]);
+  const [memberLoadError, setMemberLoadError] = useState('');
+  const [projectMembersLoading, setProjectMembersLoading] = useState(false);
+  const [projectMemberError, setProjectMemberError] = useState('');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [teamFilter, setTeamFilter] = useState('ALL');
   const [sortOrder, setSortOrder] = useState('updated');
   const [createOpen, setCreateOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState(null);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState('');
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
+  const [projectMemberships, setProjectMemberships] = useState([]);
+  const [projectMemberIds, setProjectMemberIds] = useState([]);
   const [form, setForm] = useState({ name: '', description: '', status: 'PLANNING', team: '', start_date: '', target_end_date: '' });
+
+  useEffect(() => {
+    if (!org?.id) {
+      setOrganizationMembers([]);
+      return undefined;
+    }
+    let active = true;
+    organizationsApi.members(org.id).then(({ data }) => {
+      if (!active) return;
+      const memberships = data?.results ?? data;
+      setOrganizationMembers(memberships.filter((membership) =>
+        membership.status === 'ACTIVE' && membership.is_active !== false));
+      setMemberLoadError('');
+    }).catch((loadError) => {
+      if (active) setMemberLoadError(loadError.response?.data?.detail ?? 'Organization members could not be loaded.');
+    });
+    return () => { active = false; };
+  }, [org?.id]);
+
+  const canManageProject = (project) => canCreateProjects || (project.members ?? []).some((membership) =>
+    String(membership.user?.id) === String(user?.id) && membership.role === 'MANAGER');
 
   const filteredProjects = useMemo(() => {
     const query = search.trim().toLocaleLowerCase();
@@ -169,6 +207,51 @@ export default function Projects() {
     setDeleteTarget(projects.find((project) => String(project.id) === String(id)) ?? null);
   };
 
+  const openCreate = () => {
+    setEditingProject(null);
+    setForm({ name: '', description: '', status: 'PLANNING', team: '', start_date: '', target_end_date: '' });
+    setCreateError('');
+    setProjectMemberError('');
+    setProjectMembersLoading(false);
+    setProjectMemberships([]);
+    setProjectMemberIds([]);
+    setCreateOpen(true);
+  };
+
+  const openEdit = async (project) => {
+    setEditingProject(project);
+    setForm({
+      name: project.name ?? '',
+      description: project.description ?? '',
+      status: project.status ?? 'PLANNING',
+      team: teamId(project) ? String(teamId(project)) : '',
+      start_date: project.start_date ?? '',
+      target_end_date: project.target_end_date ?? '',
+    });
+    setCreateError('');
+    setProjectMemberError('');
+    const existingMemberships = project.members ?? [];
+    const selectedIds = existingMemberships.map((membership) =>
+      String(membership.user?.id ?? membership.user));
+    setProjectMemberships(existingMemberships);
+    setProjectMemberIds(selectedIds);
+    setCreateOpen(true);
+    if (project.members === null) {
+      setProjectMembersLoading(true);
+      try {
+        const { data } = await projectsApi.members(project.id);
+        const memberships = data?.results ?? data;
+        const ids = memberships.map((membership) => String(membership.user?.id ?? membership.user));
+        setProjectMemberships(memberships);
+        setProjectMemberIds(ids);
+      } catch (loadError) {
+        setProjectMemberError(loadError.response?.data?.detail ?? 'Project members could not be loaded. Try closing and reopening the editor.');
+      } finally {
+        setProjectMembersLoading(false);
+      }
+    }
+  };
+
   const handleDelete = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
@@ -186,20 +269,47 @@ export default function Projects() {
 
   const handleCreate = async (event) => {
     event.preventDefault();
+    if (projectMemberError || projectMembersLoading) return;
     setCreating(true);
     setCreateError('');
     try {
-      await createProject({
+      const payload = {
         ...form,
         team: form.team ? Number(form.team) : null,
         start_date: form.start_date || null,
         target_end_date: form.target_end_date || null,
-      });
+      };
+      const savedProject = editingProject
+        ? await updateProject(editingProject.id, payload)
+        : await createProject(payload);
+      const existingByUser = new Map(projectMemberships.map((membership) => [
+        String(membership.user?.id ?? membership.user),
+        membership,
+      ]));
+      const selected = new Set(projectMemberIds.map(String));
+      const toAdd = projectMemberIds.filter((id) => !existingByUser.has(String(id)));
+      const toRemove = projectMemberships.filter((membership) =>
+        !selected.has(String(membership.user?.id ?? membership.user)));
+      const memberResults = await Promise.allSettled([
+        ...toAdd.map((userId) => projectsApi.addMember(savedProject.id, { user_id: Number(userId) })),
+        ...toRemove.map((membership) => projectsApi.removeMember(savedProject.id, membership.id)),
+      ]);
+      if (memberResults.some((result) => result.status === 'rejected')) {
+        const refreshed = await projectsApi.members(savedProject.id);
+        const memberships = refreshed.data?.results ?? refreshed.data;
+        setProjectMemberships(memberships);
+        throw new Error('The project was saved, but some member changes could not be applied. Review the selected members and save again.');
+      }
+      await reload();
       setForm({ name: '', description: '', status: 'PLANNING', team: '', start_date: '', target_end_date: '' });
+      setEditingProject(null);
+      setProjectMemberships([]);
+      setProjectMemberIds([]);
+      setProjectMemberError('');
       setCreateOpen(false);
     } catch (createErrorResponse) {
       const detail = createErrorResponse.response?.data?.detail;
-      setCreateError(typeof detail === 'string' ? detail : 'Could not create the project.');
+      setCreateError(typeof detail === 'string' ? detail : (createErrorResponse.message || 'Could not save the project.'));
     } finally {
       setCreating(false);
     }
@@ -214,15 +324,15 @@ export default function Projects() {
             <h1 className={styles.pageTitle}>Your projects</h1>
             <p className={styles.pageSubtitle}>Your team’s active work, milestones and progress.</p>
           </div>
-          <button type="button" className={styles.createButton} onClick={() => { setCreateError(''); setCreateOpen(true); }}>
+          {canCreateProjects && <button type="button" className={styles.createButton} onClick={openCreate}>
             <Plus size={15} /> New project
-          </button>
+          </button>}
         </header>
 
         {createOpen && (
           <div className={styles.drawerBackdrop} role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !creating) setCreateOpen(false); }}>
             <section className={styles.projectDrawer} role="dialog" aria-modal="true" aria-labelledby="create-project-title">
-              <header className={styles.drawerHeader}><div><span className={styles.eyebrow}>Workspace</span><h2 id="create-project-title">Create project</h2><p>Set up a workspace for shared delivery.</p></div><button type="button" aria-label="Close" onClick={() => setCreateOpen(false)} disabled={creating}><X size={18} /></button></header>
+              <header className={styles.drawerHeader}><div><span className={styles.eyebrow}>Workspace</span><h2 id="create-project-title">{editingProject ? 'Edit project' : 'Create project'}</h2><p>{editingProject ? 'Update project details and delivery dates.' : 'Set up a workspace for shared delivery.'}</p></div><button type="button" aria-label="Close" onClick={() => setCreateOpen(false)} disabled={creating}><X size={18} /></button></header>
               <form className={styles.drawerForm} onSubmit={handleCreate}>
                 <label className={styles.formField}><span>Project name</span><input required maxLength={255} value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} autoFocus /></label>
                 <label className={styles.formField}><span>Description</span><textarea rows={3} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} /></label>
@@ -232,8 +342,20 @@ export default function Projects() {
                   <label className={styles.formField}><span>End date</span><input type="date" min={form.start_date || undefined} value={form.target_end_date} onChange={(event) => setForm({ ...form, target_end_date: event.target.value })} /></label>
                 </div>
                 <label className={styles.formField}><span>Status</span><DropdownSelect variant="field" ariaLabel="Project status" value={form.status} options={Object.entries(STATUS_META).map(([value, meta]) => ({ value, label: meta.label }))} onChange={(status) => setForm((current) => ({ ...current, status }))} /></label>
+                <OrganizationMemberSelector
+                  organizationId={org?.id}
+                  members={organizationMembers}
+                  selectedIds={projectMemberIds}
+                  onChange={setProjectMemberIds}
+                  label="Project members"
+                  canInvite={canInviteMembers}
+                  canInviteAdmins={canInviteAdmins}
+                  disabled={creating || projectMembersLoading || Boolean(projectMemberError)}
+                />
+                {projectMemberError && <p className={styles.formError} role="alert">{projectMemberError}</p>}
+                {memberLoadError && <p className={styles.formError} role="alert">{memberLoadError}</p>}
                 {createError && <p className={styles.formError} role="alert">{createError}</p>}
-                <div className={styles.drawerActions}><button type="button" className={styles.cancelButton} onClick={() => setCreateOpen(false)} disabled={creating}>Cancel</button><button type="submit" className={styles.createSubmit} disabled={creating || !form.name.trim()}><Check size={14} />{creating ? 'Creating…' : 'Create project'}</button></div>
+                <div className={styles.drawerActions}><button type="button" className={styles.cancelButton} onClick={() => setCreateOpen(false)} disabled={creating}>Cancel</button><button type="submit" className={styles.createSubmit} disabled={creating || projectMembersLoading || Boolean(projectMemberError) || !form.name.trim()}><Check size={14} />{creating ? (editingProject ? 'Saving…' : 'Creating…') : (editingProject ? 'Save changes' : 'Create project')}</button></div>
               </form>
             </section>
           </div>
@@ -247,17 +369,6 @@ export default function Projects() {
             <Search size={15} />
             <input className={styles.searchInput} placeholder="Search projects" value={search} onChange={(event) => setSearch(event.target.value)} />
           </label>
-          <DropdownSelect
-            variant="compact"
-            prefix="Status"
-            value={statusFilter}
-            ariaLabel="Filter projects by status"
-            options={[
-              { value: 'ALL', label: 'All statuses' },
-              ...Object.entries(STATUS_META).map(([value, meta]) => ({ value, label: meta.label })),
-            ]}
-            onChange={setStatusFilter}
-          />
           <DropdownSelect
             variant="compact"
             prefix="Team"
@@ -283,6 +394,27 @@ export default function Projects() {
             onChange={setSortOrder}
           />
         </div>
+        <nav className={styles.statusFilters} aria-label="Filter projects by status">
+          {[
+            ['ALL', 'All projects'],
+            ...Object.entries(STATUS_META).map(([value, meta]) => [value, meta.label]),
+          ].map(([value, label]) => {
+            const count = value === 'ALL'
+              ? projects.length
+              : projects.filter((project) => project.status === value).length;
+            return (
+              <button
+                type="button"
+                key={value}
+                className={statusFilter === value ? styles.statusFilterActive : ''}
+                onClick={() => setStatusFilter(value)}
+                aria-pressed={statusFilter === value}
+              >
+                {label}<span>{count}</span>
+              </button>
+            );
+          })}
+        </nav>
 
         <div className={styles.listHeading}>
           <span>{loading ? 'Loading projects…' : `${filteredProjects.length} ${filteredProjects.length === 1 ? 'project' : 'projects'}`}</span>
@@ -296,26 +428,26 @@ export default function Projects() {
             filteredProjects.map((project) => {
               const projectTeamId = teamId(project);
               const teamName = project.team?.name ?? teams.find((team) => String(team.id) === String(projectTeamId))?.name;
-              return <ProjectRow key={project.id} project={project} teamName={teamName} onDelete={requestDelete} />;
+              return <ProjectRow key={project.id} project={project} teamName={teamName} canManage={canManageProject(project)} onEdit={openEdit} onArchive={requestDelete} linkState={projectLinkState} />;
             })
           ) : (
             <div className={styles.emptyState}>
               <FolderKanban size={22} />
               <strong>{projects.length ? 'No projects match these filters' : 'No projects yet'}</strong>
               <span>{projects.length ? 'Try changing your search or filters.' : 'Create a project to start organizing work.'}</span>
-              {!projects.length && <button type="button" onClick={() => setCreateOpen(true)}>Create project</button>}
+              {!projects.length && canCreateProjects && <button type="button" onClick={openCreate}>Create project</button>}
             </div>
           )}
         </section>
         {deleteTarget && (
           <div className={styles.confirmBackdrop} role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !deleting) setDeleteTarget(null); }}>
             <section className={styles.confirmDialog} role="alertdialog" aria-modal="true" aria-labelledby="delete-project-title">
-              <h2 id="delete-project-title">Delete project?</h2>
-              <p>This will delete “{deleteTarget.name}” and cannot be undone.</p>
+              <h2 id="delete-project-title">Archive project?</h2>
+              <p>“{deleteTarget.name}” will be hidden from active work. Its tasks, members and activity history will be kept.</p>
               {deleteError && <p className={styles.formError} role="alert">{deleteError}</p>}
               <div className={styles.confirmActions}>
                 <button type="button" onClick={() => setDeleteTarget(null)} disabled={deleting}>Cancel</button>
-                <button type="button" className={styles.dangerButton} onClick={handleDelete} disabled={deleting}>{deleting ? 'Deleting…' : 'Delete project'}</button>
+                <button type="button" className={styles.dangerButton} onClick={handleDelete} disabled={deleting}>{deleting ? 'Archiving…' : 'Archive project'}</button>
               </div>
             </section>
           </div>

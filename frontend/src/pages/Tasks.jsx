@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
+  Archive,
   Bookmark,
   CalendarDays,
   CheckCircle2,
@@ -10,6 +11,8 @@ import {
   Columns3,
   FolderKanban,
   ListTodo,
+  MoreHorizontal,
+  Pencil,
   Plus,
   Rows3,
   Search,
@@ -20,8 +23,9 @@ import {
 import AppShell from '../components/layout/AppShell';
 import Avatar from '../components/Avatar';
 import DropdownSelect from '../components/DropdownSelect';
+import OrganizationMemberSelector from '../components/OrganizationMemberSelector';
 import { useDashboard } from '../hooks/useDashboard';
-import { authApi, organizationsApi, projectsApi, tasksApi } from '../services/api';
+import { authApi, organizationsApi, projectsApi, tasksApi, teamsApi } from '../services/api';
 import styles from './Tasks.module.css';
 
 const STATUS_META = {
@@ -132,8 +136,8 @@ function PriorityLabel({ value }) {
   return <span className={`${styles.priorityLabel} ${styles[meta.className]}`}><i />{meta.label}</span>;
 }
 
-function TaskLink({ task, children, className }) {
-  return <NavLink to={`/tasks/${task.id}`} className={className}>{children}</NavLink>;
+function TaskLink({ task, children, className, linkState }) {
+  return <NavLink to={`/tasks/${task.id}`} state={linkState} className={className}>{children}</NavLink>;
 }
 
 function EmptyState({ title, detail }) {
@@ -146,13 +150,30 @@ function EmptyState({ title, detail }) {
   );
 }
 
+function TaskActions({ task, canEdit, canArchive, onEdit, onArchive }) {
+  const [open, setOpen] = useState(false);
+  if (!canEdit && !canArchive) return null;
+  return (
+    <details className={styles.taskActions} open={open} onToggle={(event) => setOpen(event.currentTarget.open)} onClick={(event) => event.stopPropagation()}>
+      <summary aria-label={`Actions for ${task.title}`}><MoreHorizontal size={16} /></summary>
+      <div>
+        {canEdit && <button type="button" onClick={() => { setOpen(false); onEdit(task); }}><Pencil size={13} /> Edit task</button>}
+        {canArchive && <button type="button" className={styles.archiveTaskAction} onClick={() => { setOpen(false); onArchive(task); }}><Archive size={13} /> Archive task</button>}
+      </div>
+    </details>
+  );
+}
+
 export default function Tasks() {
   const { user, org, loading: workspaceLoading } = useDashboard();
   const navigate = useNavigate();
+  const location = useLocation();
+  const taskLinkState = { backgroundLocation: location };
   const [tasks, setTasks] = useState([]);
   const [projects, setProjects] = useState([]);
   const [sprints, setSprints] = useState([]);
   const [projectMembers, setProjectMembers] = useState({});
+  const [teamMembers, setTeamMembers] = useState({});
   const [organizationMembers, setOrganizationMembers] = useState([]);
   const [assigneeLoadError, setAssigneeLoadError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -185,8 +206,16 @@ export default function Tasks() {
   const [selectedSprintId, setSelectedSprintId] = useState(null);
   const [sprintActionError, setSprintActionError] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState(null);
   const [createSaving, setCreateSaving] = useState(false);
   const [createError, setCreateError] = useState('');
+  const [sprintFormOpen, setSprintFormOpen] = useState(false);
+  const [sprintSaving, setSprintSaving] = useState(false);
+  const [sprintError, setSprintError] = useState('');
+  const [newSprint, setNewSprint] = useState({ name: '', start_date: '', end_date: '', goal: '' });
+  const [archiveTarget, setArchiveTarget] = useState(null);
+  const [archiveSaving, setArchiveSaving] = useState(false);
+  const [archiveError, setArchiveError] = useState('');
   const [newTask, setNewTask] = useState({
     projectId: '',
     title: '',
@@ -195,6 +224,7 @@ export default function Tasks() {
     status: 'TODO',
     assigned_to: '',
     due_date: '',
+    sprintId: '',
   });
 
   useEffect(() => {
@@ -215,7 +245,7 @@ export default function Tasks() {
   }, [workspaceLoading, org?.id]);
 
   useEffect(() => {
-    if (!org?.id || !['OWNER', 'ADMIN'].includes(org.access_level)) {
+    if (!org?.id) {
       setOrganizationMembers([]);
       setAssigneeLoadError('');
       return undefined;
@@ -231,10 +261,25 @@ export default function Tasks() {
       setAssigneeLoadError(getErrorMessage(membersError, 'Organization members could not be loaded for assignment.'));
     });
     return () => { active = false; };
-  }, [org?.id, org?.access_level]);
+  }, [org?.id]);
 
   useEffect(() => {
+    if (workspaceLoading) return undefined;
+    if (!org?.id) {
+      setProjects([]);
+      setTasks([]);
+      setSprints([]);
+      setProjectMembers({});
+      setTeamMembers({});
+      setLoading(false);
+      return undefined;
+    }
     let active = true;
+    setProjects([]);
+    setTasks([]);
+    setSprints([]);
+    setProjectMembers({});
+    setTeamMembers({});
 
     async function loadWorkspace() {
       setLoading(true);
@@ -245,7 +290,11 @@ export default function Tasks() {
         if (!active) return;
         setProjects(loadedProjects);
 
-        const [taskResults, sprintResults, memberResults] = await Promise.all([
+        const teamIds = [...new Set(loadedProjects
+          .map((project) => project.team?.id ?? project.team)
+          .filter((teamId) => teamId != null)
+          .map(String))];
+        const [taskResults, sprintResults, memberResults, teamMemberResults] = await Promise.all([
           Promise.allSettled(loadedProjects.map(async (project) => {
             const response = await tasksApi.list(project.id);
             return getRows(response.data).map((task) => ({
@@ -255,6 +304,7 @@ export default function Tasks() {
           })),
           Promise.allSettled(loadedProjects.map((project) => projectsApi.sprints(project.id))),
           Promise.allSettled(loadedProjects.map((project) => projectsApi.members(project.id))),
+          Promise.allSettled(teamIds.map((teamId) => teamsApi.members(teamId))),
         ]);
         if (!active) return;
 
@@ -278,6 +328,11 @@ export default function Tasks() {
           else membersUnavailable = true;
         });
         setProjectMembers(memberMap);
+        const teamMemberMap = {};
+        teamMemberResults.forEach((result, index) => {
+          if (result.status === 'fulfilled') teamMemberMap[teamIds[index]] = getRows(result.value.data);
+        });
+        setTeamMembers(teamMemberMap);
         setPermissionWarning(membersUnavailable);
         if (failedProjects.length) setError(`Could not load tasks from: ${failedProjects.join(', ')}.`);
       } catch (loadError) {
@@ -289,7 +344,7 @@ export default function Tasks() {
 
     loadWorkspace();
     return () => { active = false; };
-  }, []);
+  }, [workspaceLoading, org?.id]);
 
   useEffect(() => {
     let active = true;
@@ -302,25 +357,39 @@ export default function Tasks() {
   }, []);
 
   const canManageProject = (projectId) => (
-    ['OWNER', 'ADMIN'].includes(org?.access_level)
+    Boolean(org?.permissions?.can_manage_members)
     || (projectMembers[String(projectId)] ?? []).some((membership) =>
       String(membership.user?.id) === String(user?.id) && membership.role === 'MANAGER')
   );
-  const canManageTask = (task) => canManageProject(task.project?.id);
-  const canEditTask = (task) => canManageTask(task)
-    || String(task.assigned_to?.id) === String(user?.id);
+  const isProjectManager = (projectId) => (
+    (projectMembers[String(projectId)] ?? []).some((membership) =>
+      String(membership.user?.id) === String(user?.id) && membership.role === 'MANAGER')
+  );
+  const canManageTask = (task) => canManageProject(task.project?.id) || isProjectManager(task.project?.id);
+  const canEditTask = (task) => canManageTask(task) || String(task.assigned_to?.id) === String(user?.id);
   const manageableProjects = projects.filter((project) => canManageProject(project.id));
   const canCreateTask = manageableProjects.length > 0
-    || ['OWNER', 'ADMIN'].includes(org?.access_level ?? org?.membership?.role);
+    || Boolean(org?.permissions?.can_manage_members);
+  const taskFormProjects = useMemo(() => {
+    if (!editingTask?.project) return manageableProjects;
+    const currentId = String(editingTask.project.id ?? editingTask.project);
+    if (manageableProjects.some((project) => String(project.id) === currentId)) return manageableProjects;
+    return [{ id: editingTask.project.id ?? editingTask.project, name: editingTask.project.name ?? 'Current project' }, ...manageableProjects];
+  }, [editingTask, manageableProjects]);
   const createTaskAssignees = useMemo(() => {
-    const projectUsers = (projectMembers[newTask.projectId] ?? []).map((membership) => membership.user).filter(Boolean);
-    const organizationUsers = ['OWNER', 'ADMIN'].includes(org?.access_level)
-      ? organizationMembers.map((membership) => membership.user).filter(Boolean)
-      : [];
-    return Array.from(new Map(
-      [...projectUsers, ...organizationUsers].map((member) => [String(member.id), member]),
-    ).values()).sort((a, b) => fullName(a).localeCompare(fullName(b)));
-  }, [projectMembers, newTask.projectId, organizationMembers, org?.access_level]);
+    const project = projects.find((item) => String(item.id) === String(newTask.projectId));
+    const teamId = project?.team?.id ?? project?.team;
+    const eligibleIds = new Set([
+      ...(projectMembers[newTask.projectId] ?? [])
+        .filter((membership) => membership.role !== 'VIEWER')
+        .map((membership) => String(membership.user?.id ?? membership.user)),
+      ...(teamMembers[String(teamId)] ?? []).map((membership) => String(membership.user?.id ?? membership.user)),
+    ]);
+    if (editingTask?.assigned_to?.id != null) eligibleIds.add(String(editingTask.assigned_to.id));
+    return organizationMembers
+      .filter((membership) => eligibleIds.has(String(membership.user?.id ?? membership.user)))
+      .sort((a, b) => fullName(a.user).localeCompare(fullName(b.user)));
+  }, [projectMembers, teamMembers, projects, newTask.projectId, organizationMembers, editingTask]);
 
   useEffect(() => {
     if (!newTask.projectId && manageableProjects.length) {
@@ -477,6 +546,55 @@ export default function Tasks() {
     }
   };
 
+  const openCreateTask = () => {
+    setEditingTask(null);
+    setCreateError('');
+    setSprintFormOpen(false);
+    setSprintError('');
+    setNewSprint({ name: '', start_date: '', end_date: '', goal: '' });
+    setNewTask({
+      projectId: String(manageableProjects[0]?.id ?? ''),
+      title: '', description: '', priority: 'MEDIUM', status: 'TODO',
+      assigned_to: '', due_date: '', sprintId: '',
+    });
+    setCreateOpen(true);
+  };
+
+  const openEditTask = (task) => {
+    if (!canEditTask(task)) return;
+    setEditingTask(task);
+    setCreateError('');
+    setSprintFormOpen(false);
+    setSprintError('');
+    setNewSprint({ name: '', start_date: '', end_date: '', goal: '' });
+    setNewTask({
+      projectId: String(task.project?.id ?? task.project ?? ''),
+      title: task.title ?? '',
+      description: task.description ?? '',
+      priority: task.priority ?? 'MEDIUM',
+      status: task.status ?? 'TODO',
+      assigned_to: String(task.assigned_to?.id ?? ''),
+      due_date: task.due_date ?? '',
+      sprintId: String(task.sprint?.id ?? ''),
+    });
+    setCreateOpen(true);
+  };
+
+  const archiveTask = async () => {
+    if (!archiveTarget) return;
+    setArchiveSaving(true);
+    setArchiveError('');
+    try {
+      await tasksApi.delete(archiveTarget.id);
+      setTasks((current) => current.filter((task) => task.id !== archiveTarget.id));
+      setArchiveTarget(null);
+    } catch (deleteError) {
+      setArchiveError(getErrorMessage(deleteError, 'Could not archive this task.'));
+    } finally {
+      setArchiveSaving(false);
+    }
+  };
+
   const changeSprintStatus = async (sprint, action) => {
     setSprintActionError('');
     try {
@@ -489,29 +607,65 @@ export default function Tasks() {
     }
   };
 
+  const createSprintForTask = async () => {
+    const project = projects.find((item) => String(item.id) === newTask.projectId);
+    if (!project || !canManageProject(project.id) || !newSprint.name.trim()) return;
+    setSprintSaving(true);
+    setSprintError('');
+    try {
+      const response = await projectsApi.createSprint(project.id, {
+        name: newSprint.name.trim(),
+        start_date: newSprint.start_date,
+        end_date: newSprint.end_date,
+        goal: newSprint.goal.trim(),
+      });
+      const sprint = {
+        ...response.data,
+        project: { id: project.id, name: project.name },
+      };
+      setSprints((current) => [sprint, ...current.filter((item) => item.id !== sprint.id)]);
+      setNewTask((current) => ({ ...current, sprintId: String(sprint.id) }));
+      setSprintFormOpen(false);
+      setNewSprint({ name: '', start_date: '', end_date: '', goal: '' });
+    } catch (requestError) {
+      setSprintError(getErrorMessage(requestError, 'Could not create a sprint for this project.'));
+    } finally {
+      setSprintSaving(false);
+    }
+  };
+
   const handleCreateTask = async (event) => {
     event.preventDefault();
     const project = projects.find((item) => String(item.id) === newTask.projectId);
-    if (!project || !canManageProject(project.id) || !newTask.title.trim()) return;
+    const canSave = editingTask ? canEditTask(editingTask) : canManageProject(project?.id);
+    if (!project || !canSave || !newTask.title.trim()) return;
     setCreateSaving(true);
     setCreateError('');
     try {
-      const response = await tasksApi.create(project.id, {
+      const payload = {
         title: newTask.title.trim(),
         description: newTask.description.trim(),
         status: newTask.status,
         priority: newTask.priority,
         assigned_to: newTask.assigned_to ? Number(newTask.assigned_to) : null,
         due_date: newTask.due_date || null,
-      });
+        sprint_id: newTask.sprintId ? Number(newTask.sprintId) : null,
+      };
+      const response = editingTask
+        ? await tasksApi.update(editingTask.id, { ...payload, project_id: project.id })
+        : await tasksApi.create(project.id, payload);
       const assignedMember = createTaskAssignees.find((member) => String(member.id) === String(newTask.assigned_to));
-      setTasks((current) => [{
+      const savedTask = {
         ...response.data,
         assigned_to: assignedMember ?? response.data.assigned_to ?? null,
         project: response.data.project ?? { id: project.id, name: project.name },
-      }, ...current]);
+      };
+      setTasks((current) => editingTask
+        ? current.map((item) => item.id === editingTask.id ? savedTask : item)
+        : [savedTask, ...current]);
       setCreateOpen(false);
-      setNewTask((current) => ({ ...current, title: '', description: '', priority: 'MEDIUM', status: 'TODO', assigned_to: '', due_date: '' }));
+      setEditingTask(null);
+      setNewTask((current) => ({ ...current, title: '', description: '', priority: 'MEDIUM', status: 'TODO', assigned_to: '', due_date: '', sprintId: '' }));
     } catch (createErrorValue) {
       setCreateError(getErrorMessage(createErrorValue, 'Could not create this task. Check your project access and try again.'));
     } finally {
@@ -611,13 +765,22 @@ export default function Tasks() {
 
   const renderWorkRow = (task) => (
     <article className={styles.workRow} key={task.id}>
-      <TaskLink task={task} className={styles.workTaskTitle}>{task.title}</TaskLink>
+      <TaskLink task={task} linkState={taskLinkState} className={styles.workTaskTitle}>{task.title}</TaskLink>
       <div className={styles.workTaskMeta}>
         <StatusLabel value={task.status} />
         <PriorityLabel value={task.priority} />
         <span className={styles.workContext}>{task.project?.name ?? 'Project'}{task.sprint?.name ? ` · ${task.sprint.name}` : ''}</span>
         <span className={`${styles.workDue} ${isOverdue(task) ? styles.overdueText : isDueSoon(task) ? styles.dueSoon : ''}`}>{dueLabel(task)}</span>
       </div>
+      {(canEditTask(task) || canManageTask(task)) && (
+        <TaskActions
+          task={task}
+          canEdit={canEditTask(task)}
+          canArchive={canManageTask(task)}
+          onEdit={openEditTask}
+          onArchive={(item) => { setArchiveError(''); setArchiveTarget(item); }}
+        />
+      )}
     </article>
   );
 
@@ -743,12 +906,12 @@ export default function Tasks() {
                   aria-label={`Open task ${task.title}`}
                   onClick={(event) => {
                     if (event.target.closest('a, button, select')) return;
-                    navigate(`/tasks/${task.id}`);
+                      navigate(`/tasks/${task.id}`, { state: taskLinkState });
                   }}
                   onKeyDown={(event) => {
                     if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) {
                       event.preventDefault();
-                      navigate(`/tasks/${task.id}`);
+                      navigate(`/tasks/${task.id}`, { state: taskLinkState });
                     }
                   }}
                   draggable={canEditTask(task)}
@@ -760,7 +923,7 @@ export default function Tasks() {
                   onDragEnd={() => { setDraggingTaskId(null); setDragTargetStatus(''); }}
                 >
                   <div className={styles.boardTaskTop}>
-                    <TaskLink task={task} className={styles.boardTaskTitle}>{task.title}</TaskLink>
+                    <TaskLink task={task} linkState={taskLinkState} className={styles.boardTaskTitle}>{task.title}</TaskLink>
                     {renderCompactStatus(task)}
                   </div>
                   <div className={styles.boardTaskMeta}>
@@ -777,6 +940,15 @@ export default function Tasks() {
                     {sprints.filter((sprint) => String(sprint.project?.id) === String(task.project?.id) && sprint.status !== 'COMPLETED').map((sprint) => <option key={sprint.id} value={sprint.id}>{sprint.name}</option>)}
                   </select>}
                   {showSprintBacklogMove && canEditTask(task) && <button type="button" className={styles.textAction} onClick={() => updateTask(task, { sprint_id: null })}>Move to backlog</button>}
+                  {(canEditTask(task) || canManageTask(task)) && (
+        <TaskActions
+          task={task}
+          canEdit={canEditTask(task)}
+          canArchive={canManageTask(task)}
+          onEdit={openEditTask}
+          onArchive={(item) => { setArchiveError(''); setArchiveTarget(item); }}
+        />
+      )}
                 </article>
               ))}
               {!columnTasks.length && <p className={styles.boardEmpty}>Drop a task here</p>}
@@ -797,7 +969,16 @@ export default function Tasks() {
           <div className={`${styles.listRow} ${showSprintBacklogMove ? styles.listRowWithAction : ''}`} key={task.id}>
             <div className={styles.listTask}>
               <CircleDot size={15} />
-              <div><TaskLink task={task} className={styles.listTaskTitle}>{task.title}</TaskLink><small>{task.project?.name ?? 'Project'}</small></div>
+              <div><TaskLink task={task} linkState={taskLinkState} className={styles.listTaskTitle}>{task.title}</TaskLink><small>{task.project?.name ?? 'Project'}</small></div>
+              {(canEditTask(task) || canManageTask(task)) && (
+        <TaskActions
+          task={task}
+          canEdit={canEditTask(task)}
+          canArchive={canManageTask(task)}
+          onEdit={openEditTask}
+          onArchive={(item) => { setArchiveError(''); setArchiveTarget(item); }}
+        />
+      )}
             </div>
             {renderCompactStatus(task)}
             <PriorityLabel value={task.priority} />
@@ -842,13 +1023,22 @@ export default function Tasks() {
                   const eligibleSprints = sprints.filter((sprint) => String(sprint.project?.id) === String(task.project?.id) && sprint.status !== 'COMPLETED');
                   return (
                     <article className={styles.backlogRow} key={task.id}>
-                      <TaskLink task={task} className={styles.backlogTaskTitle}>{task.title}</TaskLink>
+                      <TaskLink task={task} linkState={taskLinkState} className={styles.backlogTaskTitle}>{task.title}</TaskLink>
                       <span className={styles.backlogMeta}>{task.project?.name ?? 'Project'} · {fullName(task.assigned_to)}</span>
                       <span className={styles.backlogMeta}>{STATUS_META[task.status]?.label ?? task.status} · {dueLabel(task)}</span>
                       {canEditTask(task) && <select className={styles.sprintMove} value="" aria-label={`Move ${task.title} to sprint`} onChange={(event) => updateTask(task, { sprint_id: event.target.value ? Number(event.target.value) : null })}>
                         <option value="">Move to sprint…</option>
                         {eligibleSprints.map((sprint) => <option key={sprint.id} value={sprint.id}>{sprint.name}</option>)}
                       </select>}
+                      {(canEditTask(task) || canManageTask(task)) && (
+        <TaskActions
+          task={task}
+          canEdit={canEditTask(task)}
+          canArchive={canManageTask(task)}
+          onEdit={openEditTask}
+          onArchive={(item) => { setArchiveError(''); setArchiveTarget(item); }}
+        />
+      )}
                     </article>
                   );
                 })}
@@ -886,7 +1076,7 @@ export default function Tasks() {
               ? renderBoard(selectedSprintTasks, false, true)
               : renderList(selectedSprintTasks, true)
             : <EmptyState title="No tasks in this sprint" detail="Move work here from the backlog when it is ready." />}
-          <NavLink className={styles.projectLink} to={`/projects/${selectedSprint.project?.id}`}>Open project workspace <ChevronRight size={14} /></NavLink>
+          <NavLink className={styles.projectLink} to={`/projects/${selectedSprint.project?.id}`} state={taskLinkState}>Open project workspace <ChevronRight size={14} /></NavLink>
         </>
       );
     }
@@ -964,7 +1154,7 @@ export default function Tasks() {
       <div className={styles.workspace}>
         <header className={styles.pageHeader}>
           <div><span className={styles.eyebrow}>Your workspace</span><h1>Tasks</h1></div>
-          {canCreateTask && <button type="button" className={styles.newTaskButton} onClick={() => { setCreateError(''); setCreateOpen(true); }}><Plus size={16} /> New task</button>}
+          {canCreateTask && <button type="button" className={styles.newTaskButton} onClick={openCreateTask}><Plus size={16} /> New task</button>}
         </header>
 
         <nav className={styles.workspaceTabs} aria-label="Task workspaces" role="tablist">
@@ -984,13 +1174,13 @@ export default function Tasks() {
         {workspaceView === 'SPRINTS' && renderSprintWorkspace()}
 
         {createOpen && (
-          <div className={styles.drawerBackdrop} role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !createSaving) setCreateOpen(false); }}>
+          <div className={styles.drawerBackdrop} role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !createSaving) { setCreateOpen(false); setEditingTask(null); } }}>
             <section className={styles.taskDrawer} role="dialog" aria-modal="true" aria-labelledby="create-task-title">
-              <div className={styles.dialogHeader}><div><span className={styles.sectionEyebrow}>Add work</span><h2 id="create-task-title">Create task</h2></div><button type="button" aria-label="Close" onClick={() => setCreateOpen(false)} disabled={createSaving}>×</button></div>
-              {!manageableProjects.length ? (
+              <div className={styles.dialogHeader}><div><span className={styles.sectionEyebrow}>{editingTask ? 'Task details' : 'Add work'}</span><h2 id="create-task-title">{editingTask ? 'Edit task' : 'Create task'}</h2></div><button type="button" aria-label="Close" onClick={() => { setCreateOpen(false); setEditingTask(null); }} disabled={createSaving}>×</button></div>
+              {!editingTask && !manageableProjects.length ? (
                 <div className={styles.noTaskProject}>
                   {loading ? <p role="status">Loading projects…</p> : <>
-                    <p>A task needs a project. Create a project or ask to be added as a project manager, then you can create tasks here.</p>
+                    <p>A task needs an active project. Create a project first, then you can add work here.</p>
                     <NavLink to="/projects" className={styles.projectLink} onClick={() => setCreateOpen(false)}>Go to projects <ChevronRight size={14} /></NavLink>
                   </>}
                 </div>
@@ -998,23 +1188,69 @@ export default function Tasks() {
               <form onSubmit={handleCreateTask}>
                 <label>Task title<input required maxLength={255} autoFocus value={newTask.title} onChange={(event) => setNewTask((current) => ({ ...current, title: event.target.value }))} /></label>
                 <label>Description<textarea rows={4} value={newTask.description} onChange={(event) => setNewTask((current) => ({ ...current, description: event.target.value }))} /></label>
-                <label>Project<select required value={newTask.projectId} onChange={(event) => setNewTask((current) => ({ ...current, projectId: event.target.value, assigned_to: '' }))}>{manageableProjects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}</select></label>
+                <label>Project<select required value={newTask.projectId} disabled={Boolean(editingTask && !canManageTask(editingTask))} onChange={(event) => setNewTask((current) => ({ ...current, projectId: event.target.value, assigned_to: '', sprintId: '' }))}>{taskFormProjects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}</select></label>
                 <div className={styles.formRow}>
-                  <label>Assignee<select value={newTask.assigned_to} onChange={(event) => setNewTask((current) => ({ ...current, assigned_to: event.target.value }))}><option value="">Unassigned</option>{createTaskAssignees.map((member) => <option key={member.id} value={member.id}>{fullName(member)}</option>)}</select></label>
                   <label>Status<select value={newTask.status} onChange={(event) => setNewTask((current) => ({ ...current, status: event.target.value }))}>{['BACKLOG', 'TODO', 'IN_PROGRESS', 'IN_REVIEW', 'COMPLETED', 'BLOCKED'].map((status) => <option key={status} value={status}>{STATUS_META[status].label}</option>)}</select></label>
                 </div>
-                {assigneeLoadError && ['OWNER', 'ADMIN'].includes(org?.access_level) && <p className={styles.inlineError} role="alert">{assigneeLoadError}</p>}
+                <OrganizationMemberSelector
+                  organizationId={org?.id}
+                  members={createTaskAssignees}
+                  selectedIds={newTask.assigned_to ? [newTask.assigned_to] : []}
+                  onChange={(ids) => setNewTask((current) => ({ ...current, assigned_to: ids[0] ?? '' }))}
+                  multiple={false}
+                  label="Assignee"
+                  placeholder="Search eligible project or team members"
+                  canInvite={Boolean(org?.permissions?.can_manage_members)}
+                  canInviteAdmins={Boolean(org?.permissions?.can_manage_organization)}
+                  disabled={Boolean(editingTask && !canManageTask(editingTask))}
+                />
+                <div className={styles.sprintField}>
+                  <label>Sprint<select value={newTask.sprintId} onChange={(event) => {
+                    if (event.target.value === '__create__') {
+                      setSprintError('');
+                      setSprintFormOpen(true);
+                    } else {
+                      setNewTask((current) => ({ ...current, sprintId: event.target.value }));
+                      setSprintFormOpen(false);
+                    }
+                  }}>
+                    <option value="">Backlog / no sprint</option>
+                    {sprints.filter((sprint) => String(sprint.project?.id ?? sprint.project) === newTask.projectId && sprint.status !== 'COMPLETED')
+                      .map((sprint) => <option key={sprint.id} value={sprint.id}>{sprint.name} · {sprint.status === 'ACTIVE' ? 'Active' : 'Planned'}</option>)}
+                    {canManageProject(newTask.projectId) && <option value="__create__">＋ Create a sprint…</option>}
+                  </select></label>
+                </div>
+                {sprintFormOpen && <div className={styles.createSprintForm}>
+                  <strong>Create sprint for {projects.find((project) => String(project.id) === newTask.projectId)?.name ?? 'this project'}</strong>
+                  <label>Sprint name<input required maxLength={255} value={newSprint.name} onChange={(event) => setNewSprint((current) => ({ ...current, name: event.target.value }))} placeholder="e.g. Sprint 1" /></label>
+                  <div className={styles.formRow}>
+                    <label>Start date<input required type="date" value={newSprint.start_date} onChange={(event) => setNewSprint((current) => ({ ...current, start_date: event.target.value }))} /></label>
+                    <label>End date<input required type="date" min={newSprint.start_date || undefined} value={newSprint.end_date} onChange={(event) => setNewSprint((current) => ({ ...current, end_date: event.target.value }))} /></label>
+                  </div>
+                  <label>Sprint goal<input value={newSprint.goal} onChange={(event) => setNewSprint((current) => ({ ...current, goal: event.target.value }))} placeholder="Optional" /></label>
+                  {sprintError && <p className={styles.inlineError} role="alert">{sprintError}</p>}
+                  <div className={styles.sprintFormActions}><button type="button" className={styles.cancelButton} onClick={() => setSprintFormOpen(false)} disabled={sprintSaving}>Cancel</button><button type="button" className={styles.newTaskButton} onClick={createSprintForTask} disabled={sprintSaving || !newSprint.name.trim() || !newSprint.start_date || !newSprint.end_date}>{sprintSaving ? 'Creating sprint…' : 'Create sprint'}</button></div>
+                </div>}
+                {assigneeLoadError && <p className={styles.inlineError} role="alert">{assigneeLoadError}</p>}
                 <div className={styles.formRow}>
                   <label>Priority<select value={newTask.priority} onChange={(event) => setNewTask((current) => ({ ...current, priority: event.target.value }))}>{Object.entries(PRIORITY_META).map(([value, meta]) => <option key={value} value={value}>{meta.label}</option>)}</select></label>
                   <label>Due date<input type="date" value={newTask.due_date} onChange={(event) => setNewTask((current) => ({ ...current, due_date: event.target.value }))} /></label>
                 </div>
                 {createError && <p className={styles.inlineError} role="alert">{createError}</p>}
-                <div className={styles.drawerActions}><button type="button" className={styles.cancelButton} onClick={() => setCreateOpen(false)} disabled={createSaving}>Cancel</button><button type="submit" className={styles.newTaskButton} disabled={createSaving || !newTask.title.trim() || !newTask.projectId}>{createSaving ? 'Creating…' : 'Create task'}</button></div>
+                <div className={styles.drawerActions}><button type="button" className={styles.cancelButton} onClick={() => { setCreateOpen(false); setEditingTask(null); }} disabled={createSaving}>Cancel</button><button type="submit" className={styles.newTaskButton} disabled={createSaving || !newTask.title.trim() || !newTask.projectId}>{createSaving ? (editingTask ? 'Saving…' : 'Creating…') : (editingTask ? 'Save changes' : 'Create task')}</button></div>
               </form>
               )}
             </section>
           </div>
         )}
+        {archiveTarget && <div className={styles.confirmBackdrop} role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !archiveSaving) setArchiveTarget(null); }}>
+          <section className={styles.confirmDialog} role="alertdialog" aria-modal="true" aria-labelledby="archive-task-title">
+            <h2 id="archive-task-title">Archive task?</h2>
+            <p>“{archiveTarget.title}” will be removed from active work. Its comments, attachments and activity history will be kept.</p>
+            {archiveError && <p className={styles.inlineError} role="alert">{archiveError}</p>}
+            <div className={styles.drawerActions}><button type="button" className={styles.cancelButton} onClick={() => setArchiveTarget(null)} disabled={archiveSaving}>Cancel</button><button type="button" className={styles.archiveConfirm} onClick={archiveTask} disabled={archiveSaving}>{archiveSaving ? 'Archiving…' : 'Archive task'}</button></div>
+          </section>
+        </div>}
       </div>
     </AppShell>
   );

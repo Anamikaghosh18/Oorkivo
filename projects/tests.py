@@ -3,10 +3,121 @@ from django.urls import reverse
 from rest_framework.test import APIClient
 from django.core.exceptions import ValidationError
 
+from communication.models import Activity, Notification
 from organizations.models import Organization, OrganizationMembership
 from projects.models import Project, ProjectMembership, Sprint
 from tasks.models import Task
 from users.models import User
+
+
+class ProjectMembershipWorkflowTests(TestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            username='project-owner', email='project-owner@example.com', password='password'
+        )
+        self.member = User.objects.create_user(
+            username='project-member', email='project-member@example.com', password='password'
+        )
+        self.organization = Organization.objects.create(name='Project members', owner=self.owner)
+        OrganizationMembership.objects.create(
+            user=self.owner,
+            organization=self.organization,
+            access_level=OrganizationMembership.AccessLevel.OWNER,
+        )
+        self.member_organization_membership = OrganizationMembership.objects.create(
+            user=self.member,
+            organization=self.organization,
+        )
+        self.project = Project.objects.create(organization=self.organization, name='Shared project')
+        self.client = APIClient()
+        self.client.force_authenticate(self.owner)
+        self.client.credentials(HTTP_X_ORGANIZATION_ID=str(self.organization.id))
+
+    def test_add_and_remove_project_member_preserves_organization_membership(self):
+        response = self.client.post(
+            f'/api/projects/{self.project.id}/members/',
+            {'user_id': self.member.id},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 201)
+        membership_id = response.data['id']
+        self.assertTrue(Activity.objects.filter(
+            project=self.project,
+            actor=self.owner,
+            action=Activity.ActionTypes.MEMBER_ADDED,
+        ).exists())
+        self.assertTrue(Notification.objects.filter(
+            recipient=self.member,
+            type=Notification.NotificationTypes.PROJECT_UPDATED,
+            project=self.project,
+        ).exists())
+
+        removed = self.client.delete(
+            f'/api/projects/{self.project.id}/members/{membership_id}/'
+        )
+
+        self.assertEqual(removed.status_code, 204)
+        self.assertFalse(ProjectMembership.objects.filter(
+            project=self.project, user=self.member
+        ).exists())
+        self.assertTrue(OrganizationMembership.objects.filter(
+            pk=self.member_organization_membership.pk
+        ).exists())
+        self.assertTrue(Activity.objects.filter(
+            project=self.project,
+            actor=self.owner,
+            action=Activity.ActionTypes.MEMBER_REMOVED,
+        ).exists())
+
+    def test_project_member_must_belong_to_its_organization(self):
+        outside = User.objects.create_user(
+            username='outside-project', email='outside-project@example.com', password='password'
+        )
+        response = self.client.post(
+            f'/api/projects/{self.project.id}/members/',
+            {'user_id': outside.id},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('user_id', response.data)
+
+    def test_admin_can_archive_completed_project_and_completed_projects_are_listed(self):
+        admin = User.objects.create_user(
+            username='project-admin', email='project-admin@example.com', password='password'
+        )
+        OrganizationMembership.objects.create(
+            user=admin,
+            organization=self.organization,
+            access_level=OrganizationMembership.AccessLevel.ADMIN,
+        )
+        task = Task.objects.create(
+            project=self.project,
+            created_by=self.owner,
+            title='Completed project task',
+            status=Task.Status.COMPLETED,
+        )
+        self.project.status = Project.Status.COMPLETED
+        self.project.save()
+        self.client.force_authenticate(admin)
+
+        listed = self.client.get('/api/projects/')
+        listed_projects = listed.data if isinstance(listed.data, list) else listed.data['results']
+        self.assertEqual(listed.status_code, 200)
+        self.assertIn(self.project.id, [item['id'] for item in listed_projects])
+        self.assertEqual(
+            next(item for item in listed_projects if item['id'] == self.project.id)['status'],
+            Project.Status.COMPLETED,
+        )
+
+        archived = self.client.delete(f'/api/projects/{self.project.id}/')
+
+        self.assertEqual(archived.status_code, 204)
+        self.project.refresh_from_db()
+        self.assertTrue(self.project.is_archived)
+        self.assertEqual(self.project.status, Project.Status.COMPLETED)
+        self.assertTrue(Task.objects.filter(pk=task.pk).exists())
 
 
 class ProjectMilestoneAccessTests(TestCase):

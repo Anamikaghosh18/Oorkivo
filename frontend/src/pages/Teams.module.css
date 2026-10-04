@@ -11,12 +11,49 @@
 
 .createModal {
   width: min(440px, 100%);
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
   padding: 23px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-surface);
   box-shadow: var(--shadow-md);
   animation: modalAppear .2s ease-out;
+}
+
+.teamEditorBackdrop {
+  align-items: stretch;
+  padding: 0;
+  background: var(--color-bg);
+}
+
+.teamEditor {
+  display: flex;
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  flex-direction: column;
+  padding: clamp(24px, 5vw, 64px);
+  border: 0;
+  border-radius: 0;
+  background: var(--color-bg);
+  box-shadow: none;
+  animation: none;
+}
+
+.createModal.teamEditor {
+  width: 100%;
+}
+
+.teamEditor .modalHeader,
+.teamEditor .createForm {
+  width: min(100%, 920px);
+  margin-right: auto;
+  margin-left: auto;
+}
+
+.teamEditor .createForm {
+  flex: 1;
 }
 
 .modalHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 15px; margin-bottom: 20px; }
@@ -148,6 +185,19 @@
 .teamNameField input {
   height: 36px;
   padding: 0 10px;
+  border: 1px solid var(--color-border, #d9d5cc);
+  border-radius: 6px;
+  outline: 0;
+  background: var(--color-surface, #fffdf8);
+  color: var(--color-text-primary, #292c27);
+  font: inherit;
+  font-weight: 400;
+}
+
+.teamNameField textarea,
+.teamNameField select {
+  min-height: 38px;
+  padding: 8px 10px;
   border: 1px solid var(--color-border, #d9d5cc);
   border-radius: 6px;
   outline: 0;
@@ -594,6 +644,31 @@
   font-size: 9px;
 }
 
+.teamActions {
+  position: absolute;
+  top: 16px;
+  right: 0;
+  z-index: 2;
+}
+
+.teamCard { position: relative; }
+.teamActions summary { display: grid; width: 30px; height: 30px; place-items: center; border: 1px solid transparent; border-radius: 50%; color: var(--color-text-tertiary); cursor: pointer; list-style: none; }
+.teamActions summary::-webkit-details-marker { display: none; }
+.teamActions summary:hover { border-color: var(--color-border); background: var(--color-surface); color: var(--color-text-primary); }
+.teamActions details > div { position: absolute; top: 34px; right: 0; display: grid; min-width: 156px; padding: 5px; border: 1px solid var(--color-border); border-radius: 8px; background: var(--color-surface); box-shadow: var(--shadow-md); }
+.teamActions details > div button { display: flex; align-items: center; gap: 8px; padding: 8px; border: 0; border-radius: 5px; background: transparent; color: var(--color-text-secondary); font: inherit; font-size: 11px; text-align: left; cursor: pointer; }
+.teamActions details > div button:hover { background: var(--color-bg); color: var(--color-text-primary); }
+.teamActions details > div .archiveAction { color: var(--color-danger); }
+.teamActions details[open] { position: relative; }
+.teamHeader { padding-right: 38px; }
+.memberRemove { display: grid; width: 30px; height: 30px; flex: 0 0 auto; place-items: center; border: 1px solid transparent; border-radius: 50%; background: transparent; color: var(--color-text-tertiary); cursor: pointer; }
+.memberRemove:hover { border-color: var(--color-rose); background: var(--color-rose-bg); color: var(--color-danger); }
+.addMemberButton { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; padding: 6px 9px; border: 1px solid var(--color-border); border-radius: 6px; background: var(--color-surface); color: var(--color-text-secondary); font: inherit; font-size: 11px; cursor: pointer; }
+.addMemberButton:hover { background: var(--color-bg); color: var(--color-text-primary); }
+.dangerButton { min-height: 36px; padding: 0 12px; border: 1px solid var(--color-danger); border-radius: 6px; background: var(--color-danger); color: var(--color-surface); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+.dangerButton:hover:not(:disabled) { filter: brightness(.94); }
+.dangerButton:disabled { cursor: wait; opacity: .6; }
+
 @media (max-width: 850px) {
   .page { padding-bottom: 40px; }
 }
@@ -667,4 +742,244 @@
   .teamInfo strong { font-size: 16px; }
   .teamInfo small,
   .teamStats span { font-size: 11px; }
+}
+
+.pageHeader {
+  margin-bottom: var(--space-5);
+  padding: var(--space-4) 0;
+  border: 0;
+  border-bottom: 1px solid var(--color-border-subtle);
+  border-radius: 0;
+  background: transparent;
+}
+
+.summary {
+  overflow: visible;
+  border: 0;
+  border-top: 1px solid var(--color-border-subtle);
+  border-bottom: 1px solid var(--color-border-subtle);
+  border-radius: 0;
+  background: transparent;
+}
+
+.summaryItem {
+  min-height: 74px;
+  padding-top: 12px;
+  background: transparent;
+}
+
+.teamList {
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+  background: transparent;
+}
+
+.teamCard { background: transparent; }
+.teamHeader {
+  border-radius: 0;
+  background: transparent;
+  transition: background var(--transition-fast);
+}
+.teamHeader:hover { background: rgba(238, 234, 225, 0.2); }
+.teamStats { background: transparent; }
+.membersPanel {
+  border: 0;
+  border-left: 1px solid var(--color-border-subtle);
+  border-radius: 0;
+  background: rgba(238, 234, 225, 0.12);
+}
+.teamStats { color: var(--color-text-secondary); }
+.empty {
+  min-height: 200px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.createModal {
+  box-sizing: border-box;
+  display: flex;
+  width: min(760px, calc(100vw - 48px));
+  max-height: calc(100dvh - 64px);
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 22px;
+}
+
+.modalHeader {
+  flex: 0 0 auto;
+  gap: 20px;
+  margin-bottom: 18px;
+}
+
+.modalHeader h2 {
+  margin: 8px 0 6px;
+  font-size: var(--font-size-xl);
+  font-weight: 650;
+  letter-spacing: -0.025em;
+}
+
+.modalHeader p {
+  max-width: 360px;
+  font-size: var(--font-size-sm);
+  line-height: 1.55;
+}
+
+.createModal .createForm {
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr);
+  align-content: start;
+  min-height: 0;
+  flex: 1 1 auto;
+  gap: 14px 18px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 2px 3px 0 0;
+  scrollbar-gutter: stable;
+}
+
+.teamDetailsFields {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 14px;
+  align-self: start;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 2px 0;
+  background: var(--color-surface);
+}
+
+.teamMemberPanel {
+  min-width: 0;
+  max-height: min(58dvh, 460px);
+  grid-column: 2;
+  grid-row: 1;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.createModal .teamMemberPanel > section {
+  box-sizing: border-box;
+  padding: 11px;
+}
+
+.createModal .teamMemberPanel ul:last-of-type {
+  max-height: 150px;
+}
+
+.createModal .formError,
+.createModal .modalActions {
+  grid-column: 1 / -1;
+}
+
+.createModal .teamNameField {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  gap: 8px;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.createModal .teamNameField input,
+.createModal .teamNameField textarea {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-base);
+  background: rgba(255, 253, 248, 0.7);
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: 400;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast);
+}
+
+.createModal .teamNameField textarea {
+  min-height: 108px;
+  max-height: 220px;
+  resize: vertical;
+  line-height: 1.55;
+}
+
+.createModal .teamNameField input::placeholder,
+.createModal .teamNameField textarea::placeholder {
+  color: var(--color-text-tertiary);
+}
+
+.createModal .teamNameField input:focus,
+.createModal .teamNameField textarea:focus {
+  border-color: var(--color-sage-dark);
+  outline: none;
+  background: var(--color-surface);
+  box-shadow: 0 0 0 3px rgba(100, 116, 95, 0.12);
+}
+
+.createModal .formError {
+  margin: -8px 0 0;
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+}
+
+.createModal .modalActions {
+  position: sticky;
+  z-index: 1;
+  bottom: 0;
+  flex: 0 0 auto;
+  gap: 10px;
+  margin-top: 2px;
+  padding: 14px 0 2px;
+  border-top: 1px solid var(--color-border-subtle);
+  background: var(--color-surface);
+}
+
+.createModal .modalCancel,
+.createModal .createSubmit {
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: var(--radius-base);
+  font-size: var(--font-size-sm);
+}
+
+@media (max-width: 620px) {
+  .pageHeader { padding: var(--space-3) 0; }
+  .summaryItem { padding-top: 10px; }
+  .modalBackdrop { padding: 12px; }
+  .createModal {
+    width: 100%;
+    max-height: calc(100dvh - 24px);
+    padding: 20px;
+  }
+  .createModal .createForm { grid-template-columns: minmax(0, 1fr); }
+  .teamDetailsFields {
+    position: static;
+    padding: 0;
+  }
+  .teamMemberPanel {
+    max-height: min(42dvh, 320px);
+    grid-column: 1;
+    grid-row: auto;
+  }
+  .createModal .teamMemberPanel ul:last-of-type { max-height: 130px; }
+  .createModal .teamNameField textarea { min-height: 88px; }
+}
+
+@media (max-width: 420px) {
+  .createModal { padding: 16px; }
+  .createModal .modalHeader { gap: 10px; }
+  .createModal .modalHeader > div { min-width: 0; }
+  .createModal .modalActions {
+    align-items: stretch;
+    flex-direction: column-reverse;
+  }
+  .createModal .modalActions button { width: 100%; }
 }

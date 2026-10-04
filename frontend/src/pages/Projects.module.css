@@ -190,6 +190,49 @@
   padding: 14px 0 16px;
 }
 
+.statusFilters {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  overflow-x: auto;
+  padding: 0 0 12px;
+  border-bottom: 1px solid var(--border, #e8e4dc);
+  scrollbar-width: thin;
+}
+
+.statusFilters button {
+  display: inline-flex;
+  min-height: 33px;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 7px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.statusFilters button:hover {
+  background: var(--color-surface-raised);
+  color: var(--color-text-primary);
+}
+
+.statusFilters .statusFilterActive {
+  border-color: var(--color-border-subtle);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font-weight: 650;
+}
+
+.statusFilters button span {
+  color: var(--color-text-tertiary);
+  font-size: 10px;
+}
+
 .searchWrap {
   display: flex;
   width: min(280px, 36vw);
@@ -741,4 +784,66 @@
 @media (max-width: 520px) {
   .projectDrawer { width: 100%; padding: 18px; }
   .drawerDateRow { grid-template-columns: 1fr; }
+}
+
+.page { position: relative; }
+
+.pageHeader {
+  margin-bottom: var(--space-5);
+  padding: var(--space-5) var(--space-6);
+  border: 0;
+  border-bottom: 1px solid var(--color-border-subtle);
+  border-radius: 0;
+  background: rgba(240, 229, 221, 0.2);
+}
+
+.createForm {
+  padding: var(--space-5);
+  border: 0;
+  border-bottom: 1px solid var(--color-border-subtle);
+  border-radius: 0;
+  background: rgba(238, 234, 225, 0.2);
+}
+
+.toolbar {
+  margin-bottom: var(--space-2);
+  padding: var(--space-3) 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.projectList {
+  overflow: visible;
+  border: 0;
+  border-top: 1px solid var(--color-border);
+  border-radius: 0;
+  background: transparent;
+}
+
+.projectRow {
+  min-height: 132px;
+  padding: var(--space-5);
+  border-bottom-color: var(--color-border-subtle);
+  background: var(--color-surface);
+}
+
+.projectRow:hover { background: rgba(238, 234, 225, 0.32); }
+.projectMark { box-shadow: inset 0 0 0 1px rgba(255, 253, 248, 0.5); }
+.progressTrack { height: 6px; }
+.emptyState {
+  min-height: 220px;
+  margin-top: var(--space-3);
+  border: 0;
+  border-radius: 0;
+  background: rgba(238, 234, 225, 0.2);
+}
+
+.projectDrawer,
+.confirmDialog { box-shadow: var(--shadow-lg); }
+
+@media (max-width: 650px) {
+  .pageHeader { padding: var(--space-4); }
+  .createForm { padding: var(--space-4); }
+  .projectRow { padding: var(--space-4); }
 }

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, NavLink, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Bell, Building2, Camera, Check, LockKeyhole, Settings as SettingsIcon, ShieldCheck, Trash2, UserRound, Users } from 'lucide-react';
+import { ArrowLeft, Bell, Building2, Camera, Check, LockKeyhole, MoreHorizontal, Pencil, Settings as SettingsIcon, ShieldCheck, Trash2, UserRound, Users, X, ArrowUpRight } from 'lucide-react';
 import Avatar from '../components/Avatar';
 import { useAuth } from '../hooks/useAuth';
 import { authApi, organizationsApi } from '../services/api';
@@ -53,10 +54,60 @@ function organizationRoleLabel(role) {
   return ({ OWNER: 'Owner', ADMIN: 'Admin', MEMBER: 'Member' })[role] ?? 'Member';
 }
 
+function displayNameForMembership(membership) {
+  return [membership.user?.first_name, membership.user?.last_name].filter(Boolean).join(' ')
+    || membership.user?.email
+    || 'Member';
+}
+
 function SaveFeedback({ error, saved }) {
   if (error) return <p className={styles.formError} role="alert">{error}</p>;
   if (saved) return <p className={styles.savedMessage} role="status"><Check size={14} /> Changes saved</p>;
   return null;
+}
+
+function MemberActionsMenu({ email, canChangeRole, onChangeRole, onRemove }) {
+  const [position, setPosition] = useState(null);
+  const itemCount = Number(canChangeRole) + 1;
+  const menuHeight = itemCount * 36 + 10;
+  useEffect(() => {
+    if (!position) return undefined;
+    const closeOnScroll = () => setPosition(null);
+    window.addEventListener('scroll', closeOnScroll, true);
+    return () => window.removeEventListener('scroll', closeOnScroll, true);
+  }, [position]);
+
+  const toggleMenu = (event) => {
+    if (position) {
+      setPosition(null);
+      return;
+    }
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const top = bounds.top >= menuHeight + 8
+      ? bounds.top - menuHeight - 4
+      : Math.min(bounds.bottom + 4, window.innerHeight - menuHeight - 8);
+    setPosition({
+      top: Math.max(8, top),
+      left: Math.min(bounds.right - 190, window.innerWidth - 198),
+    });
+  };
+
+  return <>
+    <button type="button" className={styles.memberActionsTrigger}
+      aria-label={`Actions for ${email ?? 'member'}`} aria-expanded={Boolean(position)}
+      onClick={toggleMenu}>
+      <MoreHorizontal size={17} />
+    </button>
+    {position && createPortal(
+      <div className={styles.memberActionsLayer} role="presentation" onMouseDown={() => setPosition(null)}>
+        <ul className={styles.memberActionsMenu} style={position} onMouseDown={(event) => event.stopPropagation()}>
+          {canChangeRole && <li><button type="button" onClick={() => { setPosition(null); onChangeRole(); }}><Pencil size={13} /> Change role</button></li>}
+          <li><button type="button" className={styles.removeMemberAction} onClick={() => { setPosition(null); onRemove(); }}><Trash2 size={13} /> Remove from organization</button></li>
+        </ul>
+      </div>,
+      document.body,
+    )}
+  </>;
 }
 
 function ProfileSettings({ user, onUserUpdated }) {
@@ -344,6 +395,17 @@ function MembersSettings({ org }) {
   const [copied, setCopied] = useState('');
   const [inviting, setInviting] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [roleTarget, setRoleTarget] = useState(null);
+  const [roleDraft, setRoleDraft] = useState('MEMBER');
+  const [savingRole, setSavingRole] = useState(false);
+  const [removeTarget, setRemoveTarget] = useState(null);
+  const [removingMember, setRemovingMember] = useState(false);
+  const [memberActionError, setMemberActionError] = useState('');
+  const canManageMembers = Boolean(org.permissions?.can_manage_members)
+    || ['OWNER', 'ADMIN'].includes(org.access_level);
+  const isOwner = org.access_level === 'OWNER';
+  const isOrganizationOwner = (membership) => membership.user?.id === org.owner?.id
+    || membership.access_level === 'OWNER';
   useEffect(() => {
     let current = true;
     Promise.all([organizationsApi.members(org.id), organizationsApi.invitations(org.id)]).then(([memberResponse, invitationResponse]) => {
@@ -384,6 +446,37 @@ function MembersSettings({ org }) {
       setError('Could not copy to clipboard. Please select and copy the value.');
     }
   };
+  const saveMemberRole = async (event) => {
+    event.preventDefault();
+    if (!roleTarget) return;
+    setSavingRole(true);
+    setMemberActionError('');
+    try {
+      const { data } = await organizationsApi.updateMember(org.id, roleTarget.id, { access_level: roleDraft });
+      setMembers((current) => current.map((membership) => membership.id === roleTarget.id ? data : membership));
+      setRoleTarget(null);
+    } catch (roleError) {
+      setMemberActionError(getError(roleError, 'Could not update this member’s role.'));
+    } finally {
+      setSavingRole(false);
+    }
+  };
+  const removeOrganizationMember = async () => {
+    if (!removeTarget) return;
+    setRemovingMember(true);
+    setMemberActionError('');
+    try {
+      await organizationsApi.removeMember(org.id, removeTarget.id);
+      setMembers((current) => current.map((membership) => membership.id === removeTarget.id
+        ? { ...membership, status: 'REMOVED', is_active: false }
+        : membership));
+      setRemoveTarget(null);
+    } catch (removeError) {
+      setMemberActionError(getError(removeError, 'Could not remove this organization member.'));
+    } finally {
+      setRemovingMember(false);
+    }
+  };
   return <section className={styles.settingsSection}>
     <div className={styles.sectionHeading}><h3>Members</h3><p>People with access to {org.name}.</p><button type="button" className={styles.secondaryButton} onClick={() => { setError(''); setInviteOpen(true); }}>Invite members</button></div>
     <p className={styles.helperText}>Invitation codes are single-use and expire after seven days.</p>
@@ -405,7 +498,43 @@ function MembersSettings({ org }) {
       </section>
     </div>}
     {invitations.length > 0 && <div className={styles.pendingInvitations}><h4>Pending invitations</h4><ul>{invitations.map((item) => <li key={item.id}><span>{item.email || `Code: ${item.invitation_code}`}</span><small>{item.access_level} · expires {new Date(item.expires_at).toLocaleDateString()}</small></li>)}</ul></div>}
-    {error ? <p className={styles.formError} role="alert">{error}</p> : loading ? <p className={styles.loading}>Loading members…</p> : members.length ? <div className={styles.tableWrap}><table className={styles.memberTable}><thead><tr><th>Name</th><th>Email</th><th>Team</th><th>Role</th><th>Status</th></tr></thead><tbody>{members.map((membership) => <tr key={membership.id}><td><span className={styles.memberName}><Avatar user={membership.user} size={28} />{[membership.user?.first_name, membership.user?.last_name].filter(Boolean).join(' ') || membership.user?.email}</span></td><td>{membership.user?.email}</td><td>{membership.teams?.join(', ') || '—'}</td><td>{membership.access_level}</td><td>{membership.is_active ? 'Active' : 'Inactive'}</td></tr>)}</tbody></table></div> : <p className={styles.emptyState}>No organization members found.</p>}
+    {memberActionError && <p className={styles.formError} role="alert">{memberActionError}</p>}
+    {error ? <p className={styles.formError} role="alert">{error}</p> : loading ? <p className={styles.loading}>Loading members…</p> : members.length ? <div className={styles.tableWrap}><table className={styles.memberTable}><thead><tr><th>Name</th><th>Email</th><th>Team</th><th>Role</th><th>Status</th>{canManageMembers && <th>Actions</th>}</tr></thead><tbody>{members.map((membership) => {
+      const protectedOwner = isOrganizationOwner(membership);
+      const activeMember = membership.is_active && membership.status === 'ACTIVE';
+      const canChangeRole = canManageMembers && activeMember && !protectedOwner
+        && (isOwner || membership.access_level !== 'ADMIN');
+      const canRemove = canManageMembers && activeMember && !protectedOwner;
+      return <tr key={membership.id}>
+        <td><span className={styles.memberName}><Avatar user={membership.user} size={28} />{[membership.user?.first_name, membership.user?.last_name].filter(Boolean).join(' ') || membership.user?.email}</span></td>
+        <td>{membership.user?.email}</td><td>{membership.teams?.join(', ') || '—'}</td>
+        <td>{organizationRoleLabel(membership.access_level)}</td>
+        <td>{membership.status === 'REMOVED' ? 'Removed' : activeMember ? 'Active' : membership.status}</td>
+        {canManageMembers && <td>{protectedOwner ? <span className={styles.ownerProtected}>Owner</span> : canRemove ? <MemberActionsMenu
+          email={membership.user?.email}
+          canChangeRole={canChangeRole}
+          onChangeRole={() => { setMemberActionError(''); setRoleTarget(membership); setRoleDraft(membership.access_level); }}
+          onRemove={() => { setMemberActionError(''); setRemoveTarget(membership); }}
+        /> : <span>—</span>}</td>}
+      </tr>;
+    })}</tbody></table></div> : <p className={styles.emptyState}>No organization members found.</p>}
+    {roleTarget && <div className={styles.inviteBackdrop} role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !savingRole) setRoleTarget(null); }}>
+      <section className={styles.inviteDialog} role="dialog" aria-modal="true" aria-labelledby="member-role-title">
+        <header className={styles.inviteDialogHeader}><div><span className={styles.eyebrow}>Workspace access</span><h3 id="member-role-title">Change member role</h3><p>{displayNameForMembership(roleTarget)} · {roleTarget.user?.email}</p></div><button type="button" aria-label="Close" onClick={() => setRoleTarget(null)} disabled={savingRole}><X size={18} /></button></header>
+        <form className={styles.inviteForm} onSubmit={saveMemberRole}>
+          <label className={styles.field}><span>Organization role</span><select value={roleDraft} onChange={(event) => setRoleDraft(event.target.value)}><option value="MEMBER">Member</option>{isOwner && <option value="ADMIN">Admin</option>}</select></label>
+          {memberActionError && <p className={styles.formError} role="alert">{memberActionError}</p>}
+          <div className={styles.memberDialogActions}><button type="button" className={styles.secondaryButton} onClick={() => setRoleTarget(null)} disabled={savingRole}>Cancel</button><button type="submit" className={styles.primaryButton} disabled={savingRole || roleDraft === roleTarget.access_level}>{savingRole ? 'Saving…' : 'Save role'}</button></div>
+        </form>
+      </section>
+    </div>}
+    {removeTarget && <div className={styles.inviteBackdrop} role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !removingMember) setRemoveTarget(null); }}>
+      <section className={styles.inviteDialog} role="alertdialog" aria-modal="true" aria-labelledby="remove-member-title">
+        <header className={styles.inviteDialogHeader}><div><span className={styles.eyebrow}>Workspace access</span><h3 id="remove-member-title">Remove {displayNameForMembership(removeTarget)} from {org.name}?</h3><p>They will lose access to this organization. Their account will not be deleted.</p></div></header>
+        {memberActionError && <p className={styles.formError} role="alert">{memberActionError}</p>}
+        <div className={styles.memberDialogActions}><button type="button" className={styles.secondaryButton} onClick={() => setRemoveTarget(null)} disabled={removingMember}>Cancel</button><button type="button" className={styles.removeMemberButton} onClick={removeOrganizationMember} disabled={removingMember}>{removingMember ? 'Removing…' : 'Remove from organization'}</button></div>
+      </section>
+    </div>}
   </section>;
 }
 
@@ -422,7 +551,11 @@ function TeamsSettings({ org }) {
   }, [org.id]);
   return <section className={styles.settingsSection}>
     <div className={styles.sectionHeading}><h3>Teams</h3><p>Teams organize members around shared work.</p></div>
-    {error ? <p className={styles.formError} role="alert">{error}</p> : loading ? <p className={styles.loading}>Loading teams…</p> : teams.length ? <ul className={styles.simpleList}>{teams.map((team) => <li key={team.id}><Users size={16} /><strong>{team.name}</strong></li>)}</ul> : <p className={styles.emptyState}>No teams have been created.</p>}
+    {error ? <p className={styles.formError} role="alert">{error}</p> : loading ? <p className={styles.loading}>Loading teams…</p> : teams.length ? <ul className={`${styles.simpleList} ${styles.teamSettingsList}`}>{teams.map((team) => <li key={team.id}>
+      <Users size={16} />
+      <span><strong>{team.name}</strong>{team.description && <small>{team.description}</small>}</span>
+      <Link className={styles.teamSettingsAction} to={`/teams?manage=${encodeURIComponent(team.id)}`}><span>Manage</span><ArrowUpRight size={14} /></Link>
+    </li>)}</ul> : <p className={styles.emptyState}>No teams have been created.</p>}
     <Link className={styles.secondaryButton} to="/teams">Open Teams</Link>
   </section>;
 }
@@ -460,8 +593,6 @@ export default function Settings() {
     return items;
   }, [permissions.can_manage_organization, permissions.can_manage_members, permissions.can_manage_teams]);
   const selected = allowedItems.find((item) => item.id === section);
-  const groups = [...new Set(allowedItems.map((item) => item.group))];
-
   useEffect(() => {
     let current = true;
     authApi.me().then(({ data }) => { if (current) setProfile(data); })
@@ -488,30 +619,29 @@ export default function Settings() {
   return <div className={styles.settingsOverlay} onMouseDown={(event) => {
     if (event.target === event.currentTarget) closeSettings();
   }}>
-    <section className={styles.settingsSurface} role="dialog" aria-modal="true" aria-labelledby="settings-title">
+    <section className={styles.settingsSurface} role="dialog" aria-modal="true" aria-label="Settings">
       <header className={styles.settingsTopbar}>
         <Link to={hasBackground ? location.state.backgroundLocation.pathname : '/dashboard'} className={styles.settingsBrand}>
           <span className={styles.settingsLogo} aria-hidden="true">O</span>
           <span>Oorkivo</span>
         </Link>
-        <span className={styles.settingsTopbarLabel}>Account settings</span>
+        <span className={styles.settingsTopbarTitle}>App settings</span>
         <button type="button" className={styles.closeSettings} onClick={closeSettings} aria-label="Back to workspace">
           <ArrowLeft size={16} /><span>Back to workspace</span>
         </button>
       </header>
       <div className={styles.settingsLayout}>
         <nav className={styles.settingsNav} aria-label="Settings navigation">
-          {groups.map((group) => <div className={styles.navGroup} key={group}><h2>{group}</h2>{allowedItems.filter((item) => item.group === group).map((item) => {
+          {allowedItems.map((item) => {
             const Icon = item.icon;
             return <NavLink key={item.id} to={`/settings/${item.id}`} state={location.state} className={({ isActive }) => `${styles.navItem} ${isActive ? styles.navItemActive : ''}`}><Icon size={15} />{item.label}</NavLink>;
-          })}</div>)}
+          })}
         </nav>
         <main className={styles.contentScroller}>
-          <header className={styles.pageHeader}><div><span className={styles.eyebrow}>Account &amp; workspace</span><h1 id="settings-title">Settings</h1><p>Manage your account and workspace.</p></div></header>
           <div className={styles.content}>
           {loading || (section === 'profile' && !profile && !profileError) ? <div className={styles.loading}>Loading settings…</div>
             : !selected ? null
-              : <><div className={styles.contentHeading}><h2>{selected.label}</h2><p>{selected.group === 'Workspace' ? 'Workspace information and access.' : selected.group === 'Security' ? 'Manage how you access your account.' : 'Personal account settings.'}</p></div>
+              : <><div className={styles.contentHeading}><h2>{selected.label}</h2></div>
                 {section === 'profile' && (profileError ? <p className={styles.formError} role="alert">{profileError}</p> : <ProfileSettings user={profile} onUserUpdated={updateProfile} />)}
                 {section === 'preferences' && <PreferenceSettings />}
                 {section === 'notifications' && <NotificationSettings />}

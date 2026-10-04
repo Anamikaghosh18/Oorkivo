@@ -39,11 +39,19 @@ class ProjectCommentSerializer(serializers.ModelSerializer):
 
 class ActivitySerializer(serializers.ModelSerializer):
     actor = UserMinimalSerializer(read_only=True)
-    
+    project_name = serializers.CharField(source='project.name', read_only=True)
+    task_title = serializers.SerializerMethodField()
+
     class Meta:
         model = Activity
-        fields = ['id', 'project', 'task', 'actor', 'action', 'details', 'created_at']
+        fields = [
+            'id', 'project', 'project_name', 'task', 'task_title',
+            'actor', 'action', 'details', 'created_at',
+        ]
         read_only_fields = fields
+
+    def get_task_title(self, activity):
+        return activity.task.title if activity.task_id else None
 
 class NotificationSerializer(serializers.ModelSerializer):
     actor = UserMinimalSerializer(read_only=True)

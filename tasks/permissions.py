@@ -35,14 +35,7 @@ class HasTaskAccess(permissions.BasePermission):
             OrganizationMembership.AccessLevel.ADMIN
         ]
         
-        # 2. Check project specific management role
-        is_project_manager = ProjectMembership.objects.filter(
-            user=user, 
-            project=project, 
-            role=ProjectMembership.ProjectRole.MANAGER
-        ).exists()
-        
-        has_management_rights = is_org_admin or is_project_manager
+        has_management_rights = is_org_admin
 
         # --- PERMISSION RULES ---
         
@@ -63,12 +56,7 @@ class HasTaskAccess(permissions.BasePermission):
         elif action in ['update', 'partial_update']:
             if has_management_rights:
                 return True
-            
-           
-            if obj.assigned_to == user:
-                return True
-                
-            return False
+            return obj.assigned_to == user
 
         elif action in ['destroy']:
             return has_management_rights

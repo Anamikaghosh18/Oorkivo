@@ -54,6 +54,8 @@ function AppRoutes() {
       {backgroundLocation && (
         <Routes>
           <Route path="/settings/:section" element={<RequireAuth><Settings /></RequireAuth>} />
+          <Route path="/projects/:id" element={<RequireAuth><ProjectDetail /></RequireAuth>} />
+          <Route path="/tasks/:id" element={<RequireAuth><TaskDetail /></RequireAuth>} />
         </Routes>
       )}
     </>

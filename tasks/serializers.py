@@ -4,6 +4,7 @@ from organizations.serializers import UserMinimalSerializer
 from users.models import User
 from projects.models import Project, ProjectMembership, Sprint
 from organizations.models import OrganizationMembership
+from teams.models import TeamMembership
 
 class MinimalProjectSerializer(serializers.ModelSerializer):
     class Meta:
@@ -49,19 +50,25 @@ class TaskSerializer(serializers.ModelSerializer):
         allow_null=True,
         write_only=True,
     )
+    project_id = serializers.PrimaryKeyRelatedField(
+        source='project',
+        queryset=Project.objects.all(),
+        required=False,
+        write_only=True,
+    )
     sprint = serializers.SerializerMethodField()
 
     class Meta:
         model = Task
         fields = [
             'id', 'title', 'description', 'status', 'priority', 'due_date',
-            'project', 'project_detail', 'created_by', 'assigned_to', 'assigned_to_detail',
+            'project', 'project_id', 'project_detail', 'created_by', 'assigned_to', 'assigned_to_detail',
             'parent_task', 'parent_task_detail', 'subtasks', 'dependencies',
             'dependents', 'dependency_ids', 'sprint', 'sprint_id', 'backlog_order',
-            'estimated_hours', 'actual_hours',
+            'estimated_hours', 'actual_hours', 'is_archived',
             'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'project', 'created_by', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'project', 'created_by', 'is_archived', 'created_at', 'updated_at']
 
     def validate(self, attrs):
         request = self.context.get('request')
@@ -80,7 +87,41 @@ class TaskSerializer(serializers.ModelSerializer):
             if not (org_admin or manager) and 'assigned_to' in attrs:
                 raise serializers.ValidationError({'assigned_to': 'Only project managers can reassign tasks.'})
 
-        project = getattr(self.instance, 'project', None) or self.context.get('project')
+        project = attrs.get('project') or getattr(self.instance, 'project', None) or self.context.get('project')
+        if self.instance and project and project.organization_id != self.instance.project.organization_id:
+            raise serializers.ValidationError({'project_id': 'Tasks can only be moved within the same organization.'})
+        assignee = attrs.get('assigned_to', getattr(self.instance, 'assigned_to', None))
+        assignment_changed = (
+            self.instance is None
+            or 'assigned_to' in attrs and assignee != self.instance.assigned_to
+            or self.instance is not None and project and project.id != self.instance.project_id
+        )
+        if assignee and project and assignment_changed:
+            is_active_member = OrganizationMembership.objects.filter(
+                user=assignee,
+                organization=project.organization,
+                is_active=True,
+                status=OrganizationMembership.Status.ACTIVE,
+            ).exists()
+            is_project_eligible = ProjectMembership.objects.filter(
+                user=assignee,
+                project=project,
+                role__in=[
+                    ProjectMembership.ProjectRole.MANAGER,
+                    ProjectMembership.ProjectRole.CONTRIBUTOR,
+                ],
+            ).exists()
+            is_team_eligible = project.team_id and TeamMembership.objects.filter(
+                user=assignee, team_id=project.team_id
+            ).exists()
+            if not is_active_member:
+                raise serializers.ValidationError({
+                    'assigned_to': 'The assignee must be an active member of this project’s organization.'
+                })
+            if not (is_project_eligible or is_team_eligible):
+                raise serializers.ValidationError({
+                    'assigned_to': 'The assignee must be a member of this project or its team.'
+                })
         parent = attrs.get('parent_task', getattr(self.instance, 'parent_task', None))
         dependencies = attrs.get('dependencies')
 
@@ -107,6 +148,21 @@ class TaskSerializer(serializers.ModelSerializer):
                         if current.id not in seen:
                             seen.add(current.id)
                             pending.extend(current.dependencies.all())
+        if self.instance and project and project.id != self.instance.project_id:
+            if (
+                self.instance.parent_task_id
+                or self.instance.subtasks.exists()
+                or self.instance.dependencies.exists()
+                or self.instance.dependents.exists()
+                or self.instance.milestones.exists()
+            ):
+                raise serializers.ValidationError({
+                    'project_id': 'Move this task only after removing its parent, subtasks, dependencies, and milestone links.'
+                })
+            if sprint and sprint.project_id != project.id:
+                raise serializers.ValidationError({
+                    'sprint_id': 'Choose a sprint in the new project or clear the current sprint.'
+                })
         return attrs
 
     def get_sprint(self, task):

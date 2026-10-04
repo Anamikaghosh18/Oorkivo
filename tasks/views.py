@@ -2,6 +2,7 @@ from rest_framework import viewsets, mixins, status
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from django.http import FileResponse
 from django.utils.http import content_disposition_header
@@ -55,6 +56,10 @@ class TaskViewSet(mixins.RetrieveModelMixin,
         queryset = Task.objects.filter(
             project__organization_id__in=active_organization_ids(user)
         )
+        if self.action == 'restore':
+            queryset = queryset.filter(is_archived=True)
+        elif self.request.query_params.get('include_archived') != 'true':
+            queryset = queryset.filter(is_archived=False, project__is_archived=False)
         organization_id = current_organization_id(self.request)
         if organization_id is not None:
             queryset = queryset.filter(project__organization_id=organization_id)
@@ -64,17 +69,38 @@ class TaskViewSet(mixins.RetrieveModelMixin,
         
     def perform_update(self, serializer):
         task = serializer.instance
+        target_project = serializer.validated_data.get('project', task.project)
+        if target_project.id != task.project_id:
+            if target_project.organization_id != task.project.organization_id:
+                raise ValidationError({'project_id': 'Tasks can only be moved within the same organization.'})
+            if target_project.is_archived or not self._has_management_rights_for_project(target_project):
+                raise PermissionDenied('You cannot move tasks into this project.')
         before = {
+            'title': task.title,
+            'description': task.description,
             'status': task.status,
             'priority': task.priority,
             'assigned_to_id': task.assigned_to_id,
             'due_date': task.due_date,
             'sprint_id': task.sprint_id,
+            'project_id': task.project_id,
         }
         milestones = list(task.milestones.all()) if task.status != Task.Status.COMPLETED else []
         task._current_user = self.request.user
         updated = serializer.save()
         events = []
+        changed_fields = [
+            key for key in ('title', 'description')
+            if before[key] != getattr(updated, key)
+        ]
+        if changed_fields:
+            events.append((Activity.ActionTypes.TASK_UPDATED, {'fields': changed_fields}))
+        if before['project_id'] != updated.project_id:
+            events.append((Activity.ActionTypes.TASK_UPDATED, {
+                'fields': ['project'],
+                'old_project_id': before['project_id'],
+                'new_project_id': updated.project_id,
+            }))
         if before['status'] != updated.status:
             events.append((Activity.ActionTypes.STATUS_CHANGED, {'old': before['status'], 'new': updated.status}))
             if updated.status == Task.Status.COMPLETED:
@@ -147,13 +173,9 @@ class TaskViewSet(mixins.RetrieveModelMixin,
             return Response(TaskSerializer(
                 rows, many=True, context={'request': request}
             ).data)
-        can_create = parent.assigned_to_id == request.user.id or self._has_management_rights(parent)
+        can_create = self._has_management_rights(parent)
         if not can_create:
-            return Response({'detail': 'Only the assignee or a project manager can add subtasks.'}, status=status.HTTP_403_FORBIDDEN)
-        is_manager = self._has_management_rights(parent)
-        requested_assignee = request.data.get('assigned_to')
-        if not is_manager and requested_assignee not in (None, '', request.user.id, str(request.user.id)):
-            return Response({'detail': 'Only project managers can assign subtasks to other members.'}, status=status.HTTP_403_FORBIDDEN)
+            return Response({'detail': 'Only organization owners or admins can add subtasks.'}, status=status.HTTP_403_FORBIDDEN)
         serializer = TaskSerializer(
             data=request.data, context={'project': parent.project, 'request': request}
         )
@@ -233,22 +255,54 @@ class TaskViewSet(mixins.RetrieveModelMixin,
         return response
 
     def _has_management_rights(self, task):
+        return self._has_management_rights_for_project(task.project)
+
+    def _has_management_rights_for_project(self, project):
         org_admin = OrganizationMembership.objects.filter(
             user=self.request.user,
-            organization=task.project.organization,
+            organization=project.organization,
             access_level__in=[OrganizationMembership.AccessLevel.OWNER, OrganizationMembership.AccessLevel.ADMIN],
             is_active=True,
             status=OrganizationMembership.Status.ACTIVE,
         ).exists()
         project_manager = ProjectMembership.objects.filter(
-            user=self.request.user, project=task.project,
+            user=self.request.user,
+            project=project,
             role=ProjectMembership.ProjectRole.MANAGER,
         ).exists()
         return org_admin or project_manager
 
     def perform_destroy(self, instance):
-        instance._current_user = self.request.user
-        instance.delete()
+        instance.is_archived = True
+        instance.save(update_fields=['is_archived', 'updated_at'])
+        Activity.objects.create(
+            project=instance.project,
+            task=instance,
+            actor=self.request.user,
+            action=Activity.ActionTypes.TASK_ARCHIVED,
+            details={'task_title': instance.title},
+        )
+
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    def restore(self, request, pk=None):
+        task = self.get_object()
+        if not self._has_management_rights(task):
+            return Response({'detail': 'Not permitted.'}, status=status.HTTP_403_FORBIDDEN)
+        if task.project.is_archived:
+            return Response(
+                {'detail': 'Restore the project before restoring its tasks.'},
+                status=status.HTTP_409_CONFLICT,
+            )
+        task.is_archived = False
+        task.save(update_fields=['is_archived', 'updated_at'])
+        Activity.objects.create(
+            project=task.project,
+            task=task,
+            actor=request.user,
+            action=Activity.ActionTypes.TASK_RESTORED,
+            details={'task_title': task.title},
+        )
+        return Response(TaskSerializer(task, context=self.get_serializer_context()).data)
 
 
 from rest_framework.views import APIView
@@ -257,6 +311,8 @@ class ProjectTasksAPIView(APIView):
     permission_classes = [IsAuthenticated]
     
     def check_project_access(self, user, project):
+        if project.is_archived:
+            return False
         # 1. check org admin
         org = project.organization
         is_org_admin = OrganizationMembership.objects.filter(
@@ -280,6 +336,8 @@ class ProjectTasksAPIView(APIView):
         return False
         
     def check_project_management(self, user, project):
+        if project.is_archived:
+            return False
         is_org_admin = OrganizationMembership.objects.filter(
             user=user, 
             organization=project.organization, 
@@ -305,7 +363,7 @@ class ProjectTasksAPIView(APIView):
         if not self.check_project_access(request.user, project):
             return Response({'detail': 'Not permitted.'}, status=status.HTTP_403_FORBIDDEN)
             
-        tasks = Task.objects.filter(project=project).select_related(
+        tasks = Task.objects.filter(project=project, is_archived=False).select_related(
             'created_by', 'assigned_to', 'project', 'sprint'
         )
         
@@ -344,6 +402,16 @@ class ProjectTasksAPIView(APIView):
                     project=project, task=task, actor=request.user,
                     action=Activity.ActionTypes.CREATED,
                 )
+                if task.assigned_to:
+                    create_notification(
+                        recipient=task.assigned_to,
+                        actor=request.user,
+                        kind=Notification.NotificationTypes.TASK_ASSIGNED,
+                        title='You were assigned a task',
+                        message=f'{request.user.get_full_name() or request.user.email} assigned you "{task.title}".',
+                        task=task,
+                        project=project,
+                    )
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             except Exception as e:
                 return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)

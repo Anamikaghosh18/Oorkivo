@@ -1,7 +1,7 @@
 .topbar {
   height: var(--topbar-height);
-  background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-border-subtle);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -12,7 +12,7 @@
   right: 0;
   z-index: 90;
   transition: left var(--transition-base);
-  box-shadow: var(--shadow-xs);
+  box-shadow: 0 1px 3px rgba(41, 44, 39, 0.035);
 }
 
 /* Collapsed state handled by AppShell CSS var */

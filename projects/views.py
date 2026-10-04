@@ -2,7 +2,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import NotFound, PermissionDenied
 from django.db import models
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
@@ -13,7 +13,7 @@ from teams.models import TeamMembership
 from organizations.context import active_organization_ids, current_organization_id
 from communication.models import Activity, Notification
 from communication.serializers import ActivitySerializer
-from communication.services import notify_project_members
+from communication.services import create_notification, notify_project_members
 
 class ProjectViewSet(viewsets.ModelViewSet):
     serializer_class = ProjectSerializer
@@ -30,7 +30,8 @@ class ProjectViewSet(viewsets.ModelViewSet):
         admin_org_ids = OrganizationMembership.objects.filter(
             user=user, 
             access_level__in=[OrganizationMembership.AccessLevel.OWNER, OrganizationMembership.AccessLevel.ADMIN],
-            is_active=True
+            is_active=True,
+            status=OrganizationMembership.Status.ACTIVE,
         ).values_list('organization_id', flat=True)
 
         queryset = Project.objects.filter(
@@ -40,6 +41,10 @@ class ProjectViewSet(viewsets.ModelViewSet):
             models.Q(memberships__user=user) |
             models.Q(team__memberships__user=user)
         ).distinct()
+        if self.action == 'restore':
+            queryset = queryset.filter(is_archived=True)
+        elif self.request.query_params.get('include_archived') != 'true':
+            queryset = queryset.filter(is_archived=False)
         organization_id = current_organization_id(self.request)
         if organization_id is not None:
             queryset = queryset.filter(organization_id=organization_id)
@@ -92,10 +97,19 @@ class ProjectViewSet(viewsets.ModelViewSet):
             'name': project.name,
             'description': project.description,
             'status': project.status,
+            'team_id': project.team_id,
+            'start_date': project.start_date,
             'target_end_date': project.target_end_date,
         }
         updated = serializer.save()
-        if any(previous[key] != getattr(updated, key) for key in previous):
+        changed = [key for key in previous if previous[key] != getattr(updated, key)]
+        if changed:
+            Activity.objects.create(
+                project=updated,
+                actor=self.request.user,
+                action=Activity.ActionTypes.PROJECT_UPDATED,
+                details={'fields': changed},
+            )
             notify_project_members(
                 project=updated,
                 actor=self.request.user,
@@ -106,9 +120,32 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         project = self.get_object()
-        if not self.check_admin_permission(project):
+        if not self.has_management_permission(project):
             return Response({'detail': 'Not permitted.'}, status=status.HTTP_403_FORBIDDEN)
-        return super().destroy(request, *args, **kwargs)
+        project.is_archived = True
+        project.save(update_fields=['is_archived', 'updated_at'])
+        Activity.objects.create(
+            project=project,
+            actor=request.user,
+            action=Activity.ActionTypes.PROJECT_ARCHIVED,
+            details={'project_name': project.name},
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    def restore(self, request, pk=None):
+        project = self.get_object()
+        if not self.has_management_permission(project):
+            return Response({'detail': 'Not permitted.'}, status=status.HTTP_403_FORBIDDEN)
+        project.is_archived = False
+        project.save(update_fields=['is_archived', 'updated_at'])
+        Activity.objects.create(
+            project=project,
+            actor=request.user,
+            action=Activity.ActionTypes.PROJECT_RESTORED,
+            details={'project_name': project.name},
+        )
+        return Response(ProjectSerializer(project).data)
 
     @action(detail=True, methods=['get', 'post'])
     def members(self, request, pk=None):
@@ -126,7 +163,8 @@ class ProjectViewSet(viewsets.ModelViewSet):
                 return Response({'detail': 'Not permitted.'}, status=status.HTTP_403_FORBIDDEN)
                 
             serializer = ProjectMembershipSerializer(
-                data=request.data, context=self.get_serializer_context()
+                data=request.data,
+                context={**self.get_serializer_context(), 'project': project},
             )
             if serializer.is_valid():
                 try:
@@ -135,12 +173,44 @@ class ProjectViewSet(viewsets.ModelViewSet):
                         project=project,
                         actor=request.user,
                         action=Activity.ActionTypes.MEMBER_ADDED,
-                        details={'member_id': membership.user_id},
+                        details={'member_id': membership.user_id, 'member_name': membership.user.get_full_name() or membership.user.email},
+                    )
+                    create_notification(
+                        recipient=membership.user,
+                        actor=request.user,
+                        kind=Notification.NotificationTypes.PROJECT_UPDATED,
+                        title='You were added to a project',
+                        message=f'{request.user.get_full_name() or request.user.email} added you to {project.name}.',
+                        project=project,
                     )
                     return Response(serializer.data, status=status.HTTP_201_CREATED)
-                except Exception as e:
+                except (ValidationError, IntegrityError) as e:
                     return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(
+        detail=True,
+        methods=['delete'],
+        url_path=r'members/(?P<membership_id>\d+)',
+    )
+    def member_detail(self, request, pk=None, membership_id=None):
+        project = self.get_object()
+        if not self.has_management_permission(project):
+            return Response({'detail': 'Not permitted.'}, status=status.HTTP_403_FORBIDDEN)
+        membership = ProjectMembership.objects.filter(
+            project=project, id=membership_id
+        ).select_related('user').first()
+        if membership is None:
+            raise NotFound('Project membership not found.')
+        member_id = membership.user_id
+        membership.delete()
+        Activity.objects.create(
+            project=project,
+            actor=request.user,
+            action=Activity.ActionTypes.MEMBER_REMOVED,
+            details={'member_id': member_id},
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=True, methods=['get', 'post'])
     def milestones(self, request, pk=None):

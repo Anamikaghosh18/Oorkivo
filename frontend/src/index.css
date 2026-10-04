@@ -176,8 +176,8 @@ body {
   font-size: var(--font-size-base);
   color: var(--color-text-primary);
   background-color: var(--color-bg);
-  background-image: radial-gradient(var(--color-border) 1px, transparent 1px);
-  background-size: 20px 20px;
+  background-image: radial-gradient(rgb(41 44 39 / 3%) .65px, transparent .65px);
+  background-size: 24px 24px;
   line-height: var(--leading-normal);
 }
 

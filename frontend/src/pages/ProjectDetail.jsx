@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { NavLink, useParams } from 'react-router-dom';
-import { ArrowLeft, CalendarDays, CheckCircle2, Circle, Clock3, FolderKanban, Users, Plus, ChevronDown, Activity as ActivityIcon } from 'lucide-react';
-import AppShell from '../components/layout/AppShell';
+import { createPortal } from 'react-dom';
+import { NavLink, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { CalendarDays, CheckCircle2, Circle, Clock3, FolderKanban, Users, Plus, ChevronDown, Activity as ActivityIcon, UserPlus } from 'lucide-react';
+import OverlayDetailShell from '../components/layout/OverlayDetailShell';
 import Avatar from '../components/Avatar';
+import OrganizationMemberSelector from '../components/OrganizationMemberSelector';
 import { selectCurrentOrganization } from '../utils/organizationContext';
 import { authApi, organizationsApi, projectsApi, tasksApi } from '../services/api';
 import styles from './ProjectDetail.module.css';
@@ -65,7 +67,7 @@ function ProjectMembers({ members, error }) {
   );
 }
 
-function RecentDiscussion({ comments, error }) {
+function RecentDiscussion({ comments, error, taskLinkState }) {
   if (error) return <p className={styles.inlineError}>{error}</p>;
   if (!comments.length) return <p className={styles.quietMessage}>No comments on recently updated tasks.</p>;
   return (
@@ -79,7 +81,7 @@ function RecentDiscussion({ comments, error }) {
               <time>{new Date(comment.created_at).toLocaleDateString('en', { month: 'short', day: 'numeric' })}</time>
             </div>
             <p>{comment.content}</p>
-            <NavLink to={`/tasks/${task.id}`}>{task.title}</NavLink>
+            <NavLink to={`/tasks/${task.id}`} state={taskLinkState}>{task.title}</NavLink>
           </div>
         </li>
       ))}
@@ -87,9 +89,9 @@ function RecentDiscussion({ comments, error }) {
   );
 }
 
-function TaskRow({ task }) {
+function TaskRow({ task, taskLinkState }) {
   return (
-    <NavLink className={styles.taskRow} to={`/tasks/${task.id}`}>
+    <NavLink className={styles.taskRow} to={`/tasks/${task.id}`} state={taskLinkState}>
       <span className={`${styles.taskStatusIcon} ${styles[`task${task.status}`]}`}>
         {task.status === 'COMPLETED' ? <CheckCircle2 size={16} /> : task.status === 'IN_PROGRESS' ? <Clock3 size={16} /> : <Circle size={16} />}
       </span>
@@ -104,7 +106,7 @@ function TaskRow({ task }) {
   );
 }
 
-function ActivityFeed({ items, tasks, error }) {
+function ActivityFeed({ items, tasks, error, taskLinkState }) {
   if (error) return <p className={styles.inlineError}>{error}</p>;
   if (!items.length) return <p className={styles.quietMessage}>Project updates will appear here as work moves forward.</p>;
   const taskById = new Map(tasks.map((task) => [String(task.id), task]));
@@ -117,7 +119,16 @@ function ActivityFeed({ items, tasks, error }) {
     if (event.action === 'DUE_DATE_CHANGED') return 'updated the due date';
     if (event.action === 'COMMENTED') return 'added a comment';
     if (event.action === 'MILESTONE_COMPLETED') return `completed milestone “${details.milestone_title}”`;
-    if (event.action === 'MEMBER_ADDED') return 'added a project member';
+    if (event.action === 'MEMBER_ADDED') {
+      return details.team_name
+        ? `added a member to the ${details.team_name} team`
+        : 'added a project member';
+    }
+    if (event.action === 'MEMBER_REMOVED') {
+      return details.team_name
+        ? `removed a member from the ${details.team_name} team`
+        : 'removed a project member';
+    }
     if (event.action === 'SPRINT_CREATED') return `created sprint “${details.sprint_name}”`;
     if (event.action === 'SPRINT_STARTED') return `started sprint “${details.sprint_name}”`;
     if (event.action === 'SPRINT_COMPLETED') return `completed sprint “${details.sprint_name}”`;
@@ -132,7 +143,7 @@ function ActivityFeed({ items, tasks, error }) {
         <li className={styles.activityItem} key={item.id}>
           <span className={styles.activityMarker}><ActivityIcon size={13} /></span>
           <div>
-            <p><strong>{fullName(item.actor)}</strong> {eventText(item)}{taskById.get(String(item.task)) && <> · <NavLink to={`/tasks/${item.task}`}>{taskById.get(String(item.task)).title}</NavLink></>}</p>
+            <p><strong>{fullName(item.actor)}</strong> {eventText(item)}{taskById.get(String(item.task)) && <> · <NavLink to={`/tasks/${item.task}`} state={taskLinkState}>{taskById.get(String(item.task)).title}</NavLink></>}</p>
             <time>{new Date(item.created_at).toLocaleString('en', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</time>
           </div>
         </li>
@@ -143,9 +154,24 @@ function ActivityFeed({ items, tasks, error }) {
 
 export default function ProjectDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const hasBackground = Boolean(location.state?.backgroundLocation);
+  const taskLinkState = location.state ?? { backgroundLocation: { pathname: `/projects/${id}` } };
+  const closeDetail = () => {
+    if (hasBackground) navigate(-1);
+    else navigate('/projects', { replace: true });
+  };
   const [project, setProject] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [members, setMembers] = useState([]);
+  const [organizationMembers, setOrganizationMembers] = useState([]);
+  const [selectedProjectMemberIds, setSelectedProjectMemberIds] = useState([]);
+  const [memberRole, setMemberRole] = useState('CONTRIBUTOR');
+  const [memberFormOpen, setMemberFormOpen] = useState(false);
+  const [memberSaving, setMemberSaving] = useState(false);
+  const [addMemberError, setAddMemberError] = useState('');
+  const [organizationMembersError, setOrganizationMembersError] = useState('');
   const [discussion, setDiscussion] = useState([]);
   const [milestones, setMilestones] = useState([]);
   const [sprints, setSprints] = useState([]);
@@ -181,6 +207,7 @@ export default function ProjectDetail() {
     setError('');
     setTasksError('');
     setMembersError('');
+    setOrganizationMembersError('');
     setDiscussionError('');
     setMilestonesError('');
     setActivityError('');
@@ -205,6 +232,19 @@ export default function ProjectDetail() {
         projectsApi.members(id),
         currentOrg?.id ? organizationsApi.teams(currentOrg.id) : Promise.resolve({ data: [] }),
       ]);
+      if (currentOrg?.id) {
+        try {
+          const organizationMembersResult = await organizationsApi.members(currentOrg.id);
+          setOrganizationMembers(getRows(organizationMembersResult.data).filter(
+            (membership) => membership.status === 'ACTIVE' && membership.is_active !== false,
+          ));
+        } catch (organizationMembersError) {
+          setOrganizationMembers([]);
+          setOrganizationMembersError('Organization members could not be loaded, so project members cannot be added.');
+        }
+      } else {
+        setOrganizationMembers([]);
+      }
       const [milestonesResult, activityResult, sprintsResult] = await Promise.allSettled([
         projectsApi.milestones(id),
         projectsApi.activity(id),
@@ -320,10 +360,52 @@ export default function ProjectDetail() {
   const canManageMilestones = members.some((membership) =>
     String(membership.user?.id) === String(user?.id) &&
     ['MANAGER', 'CONTRIBUTOR'].includes(membership.role)
-  ) || ['OWNER', 'ADMIN'].includes(org?.access_level);
+  ) || Boolean(org?.permissions?.can_manage_members);
   const canManageSprints = members.some((membership) =>
     String(membership.user?.id) === String(user?.id) && membership.role === 'MANAGER'
-  ) || ['OWNER', 'ADMIN'].includes(org?.access_level);
+  ) || Boolean(org?.permissions?.can_manage_members);
+  const canManageProject = members.some((membership) =>
+    String(membership.user?.id) === String(user?.id) && membership.role === 'MANAGER'
+  ) || Boolean(org?.permissions?.can_manage_members);
+  const addProjectMember = async (event) => {
+    event.preventDefault();
+    if (!canManageProject) return;
+    setMemberSaving(true);
+    setAddMemberError('');
+    try {
+      const currentByUser = new Map(members.map((membership) => [
+        String(membership.user?.id ?? membership.user),
+        membership,
+      ]));
+      const selected = new Set(selectedProjectMemberIds.map(String));
+      const toAdd = selectedProjectMemberIds.filter((userId) => !currentByUser.has(String(userId)));
+      const toRemove = members.filter((membership) =>
+        !selected.has(String(membership.user?.id ?? membership.user)));
+      const results = await Promise.allSettled([
+        ...toAdd.map((userId) => projectsApi.addMember(id, {
+          user_id: Number(userId),
+          role: memberRole,
+        })),
+        ...toRemove.map((membership) => projectsApi.removeMember(id, membership.id)),
+      ]);
+      if (results.some((result) => result.status === 'rejected')) {
+        const refreshedMembers = await projectsApi.members(id);
+        setMembers(getRows(refreshedMembers.data));
+        throw new Error('Some project member changes could not be applied. Review the selected members and save again.');
+      }
+      const updatedMembers = await projectsApi.members(id);
+      setMembers(getRows(updatedMembers.data));
+      const updatedActivity = await projectsApi.activity(id);
+      setActivity(getRows(updatedActivity.data));
+      setMemberFormOpen(false);
+      setSelectedProjectMemberIds([]);
+    } catch (requestError) {
+      const detail = requestError.response?.data?.detail;
+      setAddMemberError(typeof detail === 'string' ? detail : (requestError.message || 'Could not update project members.'));
+    } finally {
+      setMemberSaving(false);
+    }
+  };
   const backlogTasks = tasks.filter((task) => !task.sprint).filter((task) => {
     const query = backlogSearch.trim().toLocaleLowerCase();
     return (backlogPriority === 'ALL' || task.priority === backlogPriority)
@@ -426,10 +508,14 @@ export default function ProjectDetail() {
   };
 
   return (
-    <AppShell org={org} user={user}>
+    <OverlayDetailShell
+      centerTitle="Project workspace"
+      ariaLabel="Project details"
+      onClose={closeDetail}
+      backLabel="Back to projects"
+    >
+      <div className={styles.detailScroller}>
       <div className={styles.page}>
-        <NavLink to="/projects" className={styles.backLink}><ArrowLeft size={14} /> All projects</NavLink>
-
         {loading ? (
           <div className={styles.loadingState}>Loading project details…</div>
         ) : error ? (
@@ -440,6 +526,9 @@ export default function ProjectDetail() {
         ) : project ? (
           <>
             <header className={styles.projectHeader}>
+              <span className={styles.projectMark} aria-hidden="true">
+                <FolderKanban size={21} />
+              </span>
               <div className={styles.projectIdentity}>
                 <span className={styles.eyebrow}>Project</span>
                 <div className={styles.titleLine}>
@@ -517,7 +606,7 @@ export default function ProjectDetail() {
                             <div className={styles.milestoneDetails}>
                               {milestone.description && <p>{milestone.description}</p>}
                               {milestoneTasks.length
-                                ? milestoneTasks.map((task) => <NavLink key={task.id} to={`/tasks/${task.id}`}>{task.title}<small>{TASK_STATUS[task.status] || task.status}</small></NavLink>)
+                                ? milestoneTasks.map((task) => <NavLink key={task.id} to={`/tasks/${task.id}`} state={taskLinkState}>{task.title}<small>{TASK_STATUS[task.status] || task.status}</small></NavLink>)
                                 : <span>No tasks are linked to this milestone.</span>}
                             </div>
                           )}
@@ -591,7 +680,7 @@ export default function ProjectDetail() {
                     {taskGroups.map((group) => (
                       <section className={styles.taskGroup} key={group.key}>
                         <h3>{group.label}<span>{group.tasks.length}</span></h3>
-                        {group.tasks.map((task) => <TaskRow key={task.id} task={task} />)}
+                        {group.tasks.map((task) => <TaskRow key={task.id} task={task} taskLinkState={taskLinkState} />)}
                       </section>
                     ))}
                   </div>
@@ -601,18 +690,62 @@ export default function ProjectDetail() {
                     <div><span className={styles.sectionEyebrow}>Conversation</span><h2>Recent discussion</h2></div>
                     <span className={styles.discussionHint}>On recently updated tasks</span>
                   </div>
-                  <RecentDiscussion comments={discussion} error={discussionError} />
+                  <RecentDiscussion comments={discussion} error={discussionError} taskLinkState={taskLinkState} />
                 </section>
               </section>
               <aside className={styles.membersSection}>
                 <div className={styles.sectionHeading}>
                   <div><span className={styles.sectionEyebrow}>People</span><h2>Project team</h2></div>
-                  {!membersError && <span className={styles.taskTotal}>{members.length}</span>}
+                  <div className={styles.memberHeadingActions}>
+                    {!membersError && <span className={styles.taskTotal}>{members.length}</span>}
+                    {canManageProject && (
+                      <button
+                        type="button"
+                        className={styles.addProjectMemberButton}
+                        onClick={() => {
+                          setAddMemberError('');
+                          setSelectedProjectMemberIds(members.map((membership) =>
+                            String(membership.user?.id ?? membership.user)));
+                          setMemberFormOpen((open) => !open);
+                        }}
+                          disabled={Boolean(organizationMembersError)}
+                      >
+                        <UserPlus size={14} /> Add member
+                      </button>
+                    )}
+                  </div>
                 </div>
+                {memberFormOpen && canManageProject && (
+                  <form className={styles.addProjectMemberForm} onSubmit={addProjectMember}>
+                    <OrganizationMemberSelector
+                      organizationId={org?.id}
+                      members={organizationMembers}
+                      selectedIds={selectedProjectMemberIds}
+                      onChange={setSelectedProjectMemberIds}
+                      label="Project members"
+                      canInvite={Boolean(org?.permissions?.can_manage_members)}
+                      canInviteAdmins={Boolean(org?.permissions?.can_manage_organization)}
+                      disabled={memberSaving}
+                    />
+                    <label>
+                      Role for newly added members
+                      <select value={memberRole} onChange={(event) => setMemberRole(event.target.value)}>
+                        <option value="CONTRIBUTOR">Contributor</option>
+                        <option value="MANAGER">Manager</option>
+                        <option value="VIEWER">Viewer</option>
+                      </select>
+                    </label>
+                    <button type="submit" disabled={memberSaving}>
+                      {memberSaving ? 'Saving…' : 'Save members'}
+                    </button>
+                  </form>
+                )}
+                {organizationMembersError && <p className={styles.inlineError} role="alert">{organizationMembersError}</p>}
+                {addMemberError && <p className={styles.inlineError} role="alert">{addMemberError}</p>}
                 <ProjectMembers members={members} error={membersError} />
                 <section className={styles.activitySection}>
                   <div className={styles.sectionHeading}><div><span className={styles.sectionEyebrow}>What changed</span><h2>Recent activity</h2></div></div>
-                  <ActivityFeed items={activity} tasks={tasks} error={activityError} />
+                  <ActivityFeed items={activity} tasks={tasks} error={activityError} taskLinkState={taskLinkState} />
                 </section>
               </aside>
             </div>}
@@ -638,7 +771,7 @@ export default function ProjectDetail() {
                 <ul className={styles.backlogList}>
                   {backlogTasks.map((task) => (
                     <li key={task.id}>
-                      <NavLink to={`/tasks/${task.id}`}><span className={`${styles.backlogPriority} ${styles[`priority${task.priority}`]}`}><i />{PRIORITY[task.priority] || task.priority}</span><strong>{task.title}</strong><small>{fullName(task.assigned_to)} · {TASK_STATUS[task.status] || task.status}</small></NavLink>
+                      <NavLink to={`/tasks/${task.id}`} state={taskLinkState}><span className={`${styles.backlogPriority} ${styles[`priority${task.priority}`]}`}><i />{PRIORITY[task.priority] || task.priority}</span><strong>{task.title}</strong><small>{fullName(task.assigned_to)} · {TASK_STATUS[task.status] || task.status}</small></NavLink>
                       {(canManageSprints || String(task.assigned_to?.id) === String(user?.id)) && (
                         <select value="" onChange={(event) => moveTask(task, event.target.value)} aria-label={`Move ${task.title} to sprint`}>
                           <option value="">Move to sprint…</option>
@@ -654,7 +787,15 @@ export default function ProjectDetail() {
             {activeTab === 'SPRINTS' && <section className={styles.workspacePanel} id="project-panel-sprints" role="tabpanel" aria-labelledby="project-tab-sprints">
               <div className={styles.sectionHeading}>
                 <div><span className={styles.sectionEyebrow}>Iterations</span><h2>Project sprints</h2></div>
-                <span className={styles.taskTotal}>{sprints.length} sprints</span>
+                <div className={styles.sprintHeaderActions}>
+                  <span className={styles.taskTotal}>{sprints.length} sprints</span>
+                  {canManageSprints && <button type="button" className={styles.sprintFormToggle} onClick={() => {
+                    setSprintError('');
+                    setEditingSprintId(null);
+                    setSprintForm({ name: '', goal: '', start_date: '', end_date: '' });
+                    setSprintFormOpen(true);
+                  }}><Plus size={14} /> Create sprint</button>}
+                </div>
               </div>
               {sprintActionError && <p className={styles.inlineError} role="alert">{sprintActionError}</p>}
               {sprints.length ? <div className={styles.sprintList}>
@@ -679,7 +820,7 @@ export default function ProjectDetail() {
                     </div>
                     {sprintTasks.length > 0 && <details className={styles.sprintTasks}>
                       <summary>View sprint tasks</summary>
-                      {sprintTasks.map((task) => <div key={task.id} className={styles.sprintTaskRow}><NavLink to={`/tasks/${task.id}`}>{task.title}<small>{TASK_STATUS[task.status] || task.status}</small></NavLink>{(canManageSprints || String(task.assigned_to?.id) === String(user?.id)) && <button type="button" onClick={() => moveTask(task, '')}>Move to backlog</button>}</div>)}
+                      {sprintTasks.map((task) => <div key={task.id} className={styles.sprintTaskRow}><NavLink to={`/tasks/${task.id}`} state={taskLinkState}>{task.title}<small>{TASK_STATUS[task.status] || task.status}</small></NavLink>{(canManageSprints || String(task.assigned_to?.id) === String(user?.id)) && <button type="button" onClick={() => moveTask(task, '')}>Move to backlog</button>}</div>)}
                     </details>}
                     {canManageSprints && <div className={styles.sprintActions}>
                       <button type="button" onClick={() => editSprint(sprint)}>Edit</button>
@@ -689,33 +830,44 @@ export default function ProjectDetail() {
                   </article>;
                 })}
               </div> : <div className={styles.emptyTasks}><FolderKanban size={20} /><strong>No sprints yet</strong><span>Plan an iteration for this project’s upcoming work.</span></div>}
-              {canManageSprints && <details className={styles.sprintFormDetails} open={sprintFormOpen} onToggle={(event) => setSprintFormOpen(event.currentTarget.open)}>
-                <summary><Plus size={14} /> {editingSprintId ? 'Edit sprint' : 'Create sprint'}</summary>
-                <form onSubmit={handleSaveSprint} className={styles.sprintForm}>
-                  <label>Name<input required maxLength={255} value={sprintForm.name} onChange={(event) => setSprintForm((form) => ({ ...form, name: event.target.value }))} /></label>
-                  <label>Goal<textarea rows={2} value={sprintForm.goal} onChange={(event) => setSprintForm((form) => ({ ...form, goal: event.target.value }))} /></label>
-                  <label>Start date<input required type="date" value={sprintForm.start_date} onChange={(event) => setSprintForm((form) => ({ ...form, start_date: event.target.value }))} /></label>
-                  <label>End date<input required type="date" value={sprintForm.end_date} onChange={(event) => setSprintForm((form) => ({ ...form, end_date: event.target.value }))} /></label>
-                  {sprintError && <p className={styles.inlineError} role="alert">{sprintError}</p>}
-                  <div><button type="submit" disabled={sprintSaving}>{sprintSaving ? 'Saving…' : editingSprintId ? 'Save changes' : 'Create sprint'}</button>{editingSprintId && <button type="button" onClick={() => { setEditingSprintId(null); setSprintForm({ name: '', goal: '', start_date: '', end_date: '' }); setSprintFormOpen(false); }}>Cancel</button>}</div>
-                </form>
-              </details>}
+              {sprintFormOpen && createPortal(
+                <div className={styles.sprintModalBackdrop} role="presentation" onMouseDown={(event) => {
+                  if (event.target === event.currentTarget && !sprintSaving) setSprintFormOpen(false);
+                }}>
+                  <section className={styles.sprintModal} role="dialog" aria-modal="true" aria-labelledby="sprint-modal-title">
+                    <div className={styles.sprintFormHeading}>
+                      <div><span className={styles.sectionEyebrow}>{editingSprintId ? 'Update iteration' : 'Plan project work'}</span><h3 id="sprint-modal-title">{editingSprintId ? 'Edit sprint' : 'Create sprint'}</h3></div>
+                      <button type="button" className={styles.sprintFormClose} aria-label="Close sprint form" disabled={sprintSaving} onClick={() => setSprintFormOpen(false)}>×</button>
+                    </div>
+                    <form onSubmit={handleSaveSprint} className={styles.sprintForm}>
+                      <label className={styles.sprintNameField}>Sprint name<input required maxLength={255} value={sprintForm.name} onChange={(event) => setSprintForm((form) => ({ ...form, name: event.target.value }))} placeholder="e.g. Sprint 1" /></label>
+                      <label>Start date<input required type="date" value={sprintForm.start_date} onChange={(event) => setSprintForm((form) => ({ ...form, start_date: event.target.value }))} /></label>
+                      <label>End date<input required type="date" min={sprintForm.start_date || undefined} value={sprintForm.end_date} onChange={(event) => setSprintForm((form) => ({ ...form, end_date: event.target.value }))} /></label>
+                      <label className={styles.sprintGoalField}>Sprint goal<textarea rows={3} value={sprintForm.goal} onChange={(event) => setSprintForm((form) => ({ ...form, goal: event.target.value }))} placeholder="What should the team accomplish?" /></label>
+                      {sprintError && <p className={styles.inlineError} role="alert">{sprintError}</p>}
+                      <div className={styles.sprintFormActions}><button type="button" className={styles.sprintCancel} disabled={sprintSaving} onClick={() => setSprintFormOpen(false)}>Cancel</button><button type="submit" disabled={sprintSaving || !sprintForm.name.trim() || !sprintForm.start_date || !sprintForm.end_date}>{sprintSaving ? 'Saving…' : editingSprintId ? 'Save changes' : 'Create sprint'}</button></div>
+                    </form>
+                  </section>
+                </div>,
+                document.body,
+              )}
             </section>}
 
             {activeTab === 'TASKS' && <section className={styles.workspacePanel} id="project-panel-tasks" role="tabpanel" aria-labelledby="project-tab-tasks">
               <div className={styles.sectionHeading}><div><span className={styles.sectionEyebrow}>Delivery</span><h2>Project tasks</h2></div><span className={styles.taskTotal}>{tasks.length} total</span></div>
               {!tasksError && <nav className={styles.taskFilters} aria-label="Filter project tasks">{[['ALL', 'All'], ['MINE', `Assigned to me · ${myTaskCount}`], ['DUE_SOON', 'Due soon'], ['OVERDUE', 'Overdue'], ['COMPLETED', 'Completed']].map(([value, label]) => <button type="button" key={value} className={taskFilter === value ? styles.taskFilterActive : ''} aria-pressed={taskFilter === value} onClick={() => setTaskFilter(value)}>{label}</button>)}</nav>}
-              {tasksError ? <p className={styles.inlineError}>{tasksError}</p> : <div className={styles.taskGroups}>{taskGroups.map((group) => <section className={styles.taskGroup} key={group.key}><h3>{group.label}<span>{group.tasks.length}</span></h3>{group.tasks.map((task) => <TaskRow key={task.id} task={task} />)}</section>)}</div>}
+              {tasksError ? <p className={styles.inlineError}>{tasksError}</p> : <div className={styles.taskGroups}>{taskGroups.map((group) => <section className={styles.taskGroup} key={group.key}><h3>{group.label}<span>{group.tasks.length}</span></h3>{group.tasks.map((task) => <TaskRow key={task.id} task={task} taskLinkState={taskLinkState} />)}</section>)}</div>}
             </section>}
 
             {activeTab === 'ACTIVITY' && <section className={styles.workspacePanel} id="project-panel-activity" role="tabpanel" aria-labelledby="project-tab-activity">
               <div className={styles.sectionHeading}><div><span className={styles.sectionEyebrow}>Project history</span><h2>Recent activity</h2></div></div>
-              <ActivityFeed items={activity} tasks={tasks} error={activityError} />
-              <section className={styles.discussionSection}><div className={styles.sectionHeading}><div><span className={styles.sectionEyebrow}>Conversation</span><h2>Recent discussion</h2></div></div><RecentDiscussion comments={discussion} error={discussionError} /></section>
+              <ActivityFeed items={activity} tasks={tasks} error={activityError} taskLinkState={taskLinkState} />
+              <section className={styles.discussionSection}><div className={styles.sectionHeading}><div><span className={styles.sectionEyebrow}>Conversation</span><h2>Recent discussion</h2></div></div><RecentDiscussion comments={discussion} error={discussionError} taskLinkState={taskLinkState} /></section>
             </section>}
           </>
         ) : null}
       </div>
-    </AppShell>
+      </div>
+    </OverlayDetailShell>
   );
 }

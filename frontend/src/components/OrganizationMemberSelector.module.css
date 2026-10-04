@@ -1,0 +1,98 @@
+.selector {
+  container-type: inline-size;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 9px;
+  padding: 13px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-base);
+  background: color-mix(in srgb, var(--color-surface-raised) 48%, var(--color-surface));
+}
+
+.compact {
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.compact .heading { display: none; }
+.compact .search { min-height: 34px; }
+.compact .results { max-height: 132px; }
+.compact .option { gap: 7px; padding: 5px; }
+.compact .option .identity strong { font-size: var(--font-size-xs); }
+.compact .option .identity small { font-size: 10px; }
+.compact .singleSelected { padding: 5px; }
+.compact .inviteArea { padding-top: 5px; }
+
+.heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.heading strong { color: var(--color-text-primary); font-size: var(--font-size-sm); font-weight: 650; }
+.heading > span, .role { color: var(--color-text-tertiary); font-size: var(--font-size-xs); }
+
+.search {
+  display: flex;
+  min-height: 36px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-base);
+  background: var(--color-surface);
+  color: var(--color-text-tertiary);
+}
+
+.search:focus-within { border-color: var(--color-sage); box-shadow: 0 0 0 2px rgb(100 116 95 / 10%); }
+.search input { width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--color-text-primary); font: inherit; font-size: var(--font-size-sm); }
+
+.results, .selectedList { display: flex; max-height: 210px; flex-direction: column; gap: 3px; overflow-y: auto; margin: 0; padding: 0; list-style: none; }
+.selectedList { max-height: 150px; }
+.option, .selectedItem, .singleSelected {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 9px;
+  padding: 7px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-text-primary);
+  font: inherit;
+  text-align: left;
+}
+
+.option { width: 100%; cursor: pointer; }
+.option:hover, .optionSelected { border-color: var(--color-border-subtle); background: var(--color-surface); }
+.option:disabled, .remove:disabled { opacity: .6; cursor: not-allowed; }
+.selectedItem, .singleSelected { border-color: var(--color-border-subtle); background: var(--color-surface); }
+.avatar { flex: 0 0 auto; }
+.identity { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 2px; }
+.identity strong, .identity small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.identity strong { font-size: var(--font-size-sm); font-weight: 600; }
+.identity small { color: var(--color-text-tertiary); font-size: var(--font-size-xs); }
+.option > svg { flex: 0 0 auto; color: var(--color-sage-dark); }
+.role { flex: 0 0 auto; text-transform: capitalize; }
+.remove { display: grid; width: 28px; height: 28px; flex: 0 0 auto; place-items: center; border: 0; border-radius: 5px; background: transparent; color: var(--color-text-tertiary); cursor: pointer; }
+.remove:hover { background: var(--color-danger-bg); color: var(--color-danger); }
+.noResults { padding: 12px 7px; color: var(--color-text-tertiary); font-size: var(--font-size-xs); }
+
+.inviteArea { padding-top: 8px; border-top: 1px solid var(--color-border-subtle); }
+.inviteToggle { display: inline-flex; align-items: center; gap: 7px; padding: 4px 0; border: 0; background: none; color: var(--color-sage-dark); font: inherit; font-size: var(--font-size-xs); font-weight: 600; cursor: pointer; }
+.inviteForm { display: grid; grid-template-columns: minmax(0, 1fr) minmax(120px, .55fr); gap: 9px; }
+.inviteForm label { display: flex; min-width: 0; flex-direction: column; gap: 5px; color: var(--color-text-secondary); font-size: var(--font-size-xs); font-weight: 600; }
+.inviteForm input, .inviteForm select { box-sizing: border-box; width: 100%; min-width: 0; min-height: 36px; padding: 0 8px; border: 1px solid var(--color-border); border-radius: 5px; background: var(--color-surface); color: var(--color-text-primary); font: inherit; font-size: var(--font-size-sm); }
+.inviteError, .inviteSuccess { grid-column: 1 / -1; margin: 0; font-size: var(--font-size-xs); }
+.inviteError { color: var(--color-danger); }
+.inviteSuccess { color: var(--color-sage-dark); }
+.inviteActions { display: flex; grid-column: 1 / -1; justify-content: flex-end; gap: 7px; }
+.inviteActions button { min-height: 31px; padding: 0 10px; border: 1px solid var(--color-border); border-radius: 5px; background: var(--color-surface); color: var(--color-text-secondary); font: inherit; font-size: var(--font-size-xs); cursor: pointer; }
+.inviteActions button[type="submit"] { border-color: var(--color-sage); background: var(--color-sage); color: white; }
+.inviteActions button:disabled { opacity: .6; cursor: not-allowed; }
+
+@container (max-width: 360px) {
+  .inviteForm { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 480px) {
+  .selector { padding: 10px; }
+}

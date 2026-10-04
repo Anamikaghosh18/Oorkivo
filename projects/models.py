@@ -23,6 +23,7 @@ class Project(models.Model):
     start_date = models.DateField(null=True, blank=True)
     target_end_date = models.DateField(null=True, blank=True)
     actual_end_date = models.DateField(null=True, blank=True)
+    is_archived = models.BooleanField(default=False)
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -33,6 +34,8 @@ class Project(models.Model):
     def clean(self):
         if self.team and self.team.organization != self.organization:
             raise ValidationError("Team must belong to the same organization as the project.")
+        if self.team and self.team.is_archived:
+            raise ValidationError({"team": "Archived teams cannot be assigned to projects."})
 
     def save(self, *args, **kwargs):
         self.full_clean()

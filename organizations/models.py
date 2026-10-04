@@ -55,6 +55,7 @@ class OrganizationMembership(models.Model):
         ACTIVE = 'ACTIVE', 'Active'
         INVITED = 'INVITED', 'Invited'
         SUSPENDED = 'SUSPENDED', 'Suspended'
+        REMOVED = 'REMOVED', 'Removed'
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='org_memberships')
     organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name='memberships')

@@ -66,11 +66,14 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  padding: var(--space-4) var(--space-5);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
+  padding: var(--space-3) var(--space-4);
+  border: 0;
+  border-left: 1px solid var(--color-border-subtle);
+  border-radius: 0;
+  background: rgba(255, 253, 248, 0.28);
 }
+
+.metric:first-child { border-left: 0; }
 
 .metricLabel {
   color: var(--color-text-secondary);
@@ -379,9 +382,10 @@
 
 .listPanel {
   overflow: hidden;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface);
+  border: 0;
+  border-top: 1px solid var(--color-border);
+  border-radius: 0;
+  background: transparent;
 }
 
 .row {
@@ -1101,7 +1105,7 @@ a.row:hover {
 .boardTask time { text-align: right; }
 .boardEmpty { margin: 8px 1px; color: var(--color-text-tertiary); font-size: var(--font-size-xs); }
 
-.listPanel { overflow: hidden; border-top: 1px solid var(--color-border); border-bottom: 1px solid var(--color-border); background: transparent; }
+.listPanel { overflow: visible; border-top: 1px solid var(--color-border); border-bottom: 1px solid var(--color-border); background: transparent; }
 .listRow { display: grid; grid-template-columns: minmax(230px, 2fr) minmax(120px, 0.9fr) minmax(100px, 0.7fr) minmax(120px, 0.8fr); align-items: center; gap: 12px; min-height: 52px; padding: 7px 12px; border-bottom: 1px solid var(--color-border-subtle); }
 .listRow:last-child { border-bottom: 0; }
 .listHeader { min-height: 37px; background: rgba(248, 246, 240, 0.68); color: var(--color-text-tertiary); font-size: 10px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; }
@@ -1110,6 +1114,55 @@ a.row:hover {
 .listTask > div { display: flex; min-width: 0; flex-direction: column; gap: 3px; }
 .listTaskTitle { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .listTask small { overflow: hidden; color: var(--color-text-tertiary); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.taskActions { position: relative; z-index: 1; flex: 0 0 auto; margin-left: auto; }
+.taskActions[open] { z-index: 20; }
+.taskActions > summary {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: var(--radius-base);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  list-style: none;
+}
+.taskActions > summary::-webkit-details-marker { display: none; }
+.taskActions > summary:hover,
+.taskActions[open] > summary { border-color: var(--color-border); background: var(--color-surface); }
+.taskActions > div {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  display: flex;
+  min-width: 150px;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-base);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
+}
+.taskActions > div button {
+  display: flex;
+  width: 100%;
+  min-height: 32px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: var(--font-size-xs);
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.taskActions > div button:hover { background: var(--color-bg); }
+.taskActions > div .archiveTaskAction { color: var(--color-danger); }
 .listDue { white-space: nowrap; }
 .listRow .quickStatus { width: fit-content; font-size: var(--font-size-xs); }
 .listRow .emptyState { grid-column: 1 / -1; }
@@ -1155,7 +1208,7 @@ a.row:hover {
 .projectLink { display: inline-flex; align-items: center; gap: 4px; margin-top: var(--space-4); color: var(--color-sage-dark); font-size: var(--font-size-sm); text-decoration: none; }
 .listRowWithAction { grid-template-columns: minmax(210px, 2fr) minmax(110px, 0.9fr) minmax(90px, 0.7fr) minmax(105px, 0.8fr) auto; }
 
-.drawerBackdrop { position: fixed; z-index: 150; inset: 0; display: flex; justify-content: flex-end; background: rgb(41 44 39 / 30%); animation: drawerFadeIn .18s ease-out; }
+.drawerBackdrop { position: fixed; z-index: 550; inset: 0; display: flex; justify-content: flex-end; background: rgb(41 44 39 / 30%); animation: drawerFadeIn .18s ease-out; }
 .taskDrawer { display: flex; width: min(480px, 100%); height: 100%; flex-direction: column; overflow-y: auto; padding: 24px; border-left: 1px solid var(--color-border); background: var(--color-surface); box-shadow: -16px 0 50px rgb(0 0 0 / 12%); animation: drawerSlideIn .22s cubic-bezier(.2, .75, .25, 1); }
 .dialogHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: var(--space-4); }
 .dialogHeader h2 { font-size: var(--font-size-xl); }
@@ -1166,6 +1219,14 @@ a.row:hover {
 .taskDrawer form { display: flex; flex: 1; flex-direction: column; gap: 14px; }
 .taskDrawer form > label,
 .formRow label { display: flex; flex: 1; flex-direction: column; gap: 5px; color: var(--color-text-secondary); font-size: var(--font-size-xs); font-weight: 600; }
+.sprintField { display: flex; flex-direction: column; gap: 8px; }
+.sprintField > label { display: flex; flex-direction: column; gap: 5px; color: var(--color-text-secondary); font-size: var(--font-size-xs); font-weight: 600; }
+.createSprintForm { display: flex; flex-direction: column; gap: 10px; padding: 12px; border: 1px solid var(--color-border-subtle); border-radius: var(--radius-base); background: var(--color-bg); }
+.createSprintForm > strong { color: var(--color-text-primary); font-size: var(--font-size-xs); }
+.createSprintForm > label,
+.createSprintForm .formRow label { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 5px; color: var(--color-text-secondary); font-size: var(--font-size-xs); font-weight: 600; }
+.createSprintForm input { min-width: 0; }
+.sprintFormActions { display: flex; justify-content: flex-end; gap: 8px; }
 .taskDrawer input,
 .taskDrawer textarea,
 .taskDrawer select { width: 100%; min-height: 40px; padding: 8px 10px; border: 1px solid var(--color-border); border-radius: var(--radius-base); background: var(--color-surface); color: var(--color-text-primary); font: inherit; font-size: var(--font-size-sm); }
@@ -1218,3 +1279,67 @@ a.row:hover {
   .sprintProgressSummary { align-items: flex-start; flex-direction: column; }
   .sprintProgressSummary .sprintProgressTrack { width: 100%; }
 }
+
+.metrics .metric {
+  border-color: var(--color-border-subtle);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-xs);
+}
+
+.toolbar {
+  padding: var(--space-3);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  background: rgba(238, 234, 225, 0.48);
+}
+
+.filterControls {
+  border-radius: var(--radius-md);
+  background: rgba(255, 253, 248, 0.58);
+}
+
+.workFilters {
+  padding: 4px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  background: rgba(238, 234, 225, 0.48);
+}
+
+.workFilters .workFilterActive { box-shadow: var(--shadow-xs); }
+.workGroups { gap: var(--space-6); }
+.workGroup {
+  overflow: visible;
+  padding: var(--space-4) 0;
+  border: 0;
+  border-bottom: 1px solid var(--color-border-subtle);
+  border-radius: 0;
+  background: rgba(255, 253, 248, 0.18);
+}
+
+.workGroup h3 { padding-bottom: var(--space-2); }
+.workRow { border-bottom-color: var(--color-border-subtle); }
+.workRow:hover { background: rgba(238, 234, 225, 0.42); }
+
+.listPanel {
+  border-color: var(--color-border-subtle);
+  border-radius: 0;
+  background: transparent;
+}
+
+.listRow { border-bottom-color: var(--color-border-subtle); }
+.listHeader { background: var(--color-surface-raised); }
+.listRow:not(.listHeader):hover { background: rgba(238, 234, 225, 0.48); }
+.boardColumn { background: rgba(238, 234, 225, 0.48); }
+.boardTask { box-shadow: 0 1px 2px rgba(41, 44, 39, 0.035); }
+
+.taskDrawer { box-shadow: var(--shadow-lg); }
+
+@media (max-width: 760px) {
+  .workGroup { padding: var(--space-3); }
+}
+
+  .empty {
+    border: 1px dashed var(--color-border);
+    border-radius: var(--radius-base);
+    background: rgba(238, 234, 225, 0.4);
+  }
