@@ -12,7 +12,7 @@ from tasks.models import Task
 from projects.models import Project
 from tasks.permissions import HasTaskAccess
 from .services import accessible_project_ids, create_due_reminders, create_notification, user_can_access_project
-from organizations.context import current_organization_id
+from organizations.context import active_organization_ids, current_organization_id
 
 class TaskCommentListCreateView(generics.ListCreateAPIView):
     serializer_class = TaskCommentSerializer
@@ -102,6 +102,7 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
             Q(task__project_id__in=project_ids)
             | Q(project_id__in=project_ids)
             | Q(sprint__project_id__in=project_ids)
+            | Q(organization_id__in=active_organization_ids(self.request.user))
         ).select_related('actor', 'task', 'project', 'sprint')
 
     def list(self, request, *args, **kwargs):

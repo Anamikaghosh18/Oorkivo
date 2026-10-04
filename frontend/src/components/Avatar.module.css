@@ -5,13 +5,20 @@
   overflow: hidden;
   border: 1px solid var(--color-border-subtle);
   border-radius: 50%;
-  background: var(--color-sage-light);
-  color: var(--color-sage-dark);
+  background: var(--avatar-bg, var(--color-sage-light));
+  color: var(--avatar-fg, var(--color-sage-dark));
   font-size: 10px;
   font-weight: 700;
   letter-spacing: .01em;
   line-height: 1;
 }
+
+.tone0 { --avatar-bg: #e4ebe1; --avatar-fg: #52634f; }
+.tone1 { --avatar-bg: #eee5dc; --avatar-fg: #795f4b; }
+.tone2 { --avatar-bg: #e4e9ed; --avatar-fg: #536572; }
+.tone3 { --avatar-bg: #eee5e8; --avatar-fg: #795c68; }
+.tone4 { --avatar-bg: #e9e8dd; --avatar-fg: #69654a; }
+.tone5 { --avatar-bg: #e2ebe7; --avatar-fg: #50695d; }
 
 .avatar img {
   width: 100%;

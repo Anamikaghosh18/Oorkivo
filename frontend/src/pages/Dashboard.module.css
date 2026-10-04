@@ -205,11 +205,6 @@
   letter-spacing: 0.04em;
 }
 
-.markClay { background: var(--color-clay-bg); color: var(--color-clay); }
-.markSage { background: var(--color-slate-bg); color: var(--color-slate); }
-.markSand { background: var(--color-amber-bg); color: var(--color-amber); }
-.markSlate { background: var(--color-slate-bg); color: var(--color-slate); }
-
 .projectMain {
   flex: 1;
   min-width: 0;

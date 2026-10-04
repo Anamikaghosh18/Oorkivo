@@ -1,4 +1,5 @@
 import styles from './RecentActivity.module.css';
+import Avatar from '../Avatar';
 
 const ACTION_LABELS = {
   joined:   'joined',
@@ -6,29 +7,6 @@ const ACTION_LABELS = {
   created:  'created',
   completed: 'completed',
 };
-
-function Initials({ name }) {
-  const initials = name
-    ?.split(' ')
-    .map(n => n[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase() || '?';
-
-  const colors = [
-    ['#D4E3D3', '#4A5B4C'], ['#D3DCE3', '#3D4F5E'],
-    ['#E3D3D8', '#5E3D47'], ['#E0D9D3', '#5E4E3D'],
-    ['#D3E3DC', '#3D5E52'],
-  ];
-  const idx = name ? name.charCodeAt(0) % colors.length : 0;
-  const [bg, fg] = colors[idx];
-
-  return (
-    <div className={styles.avatar} style={{ background: bg, color: fg }}>
-      {initials}
-    </div>
-  );
-}
 
 function ActivityItem({ item, loading }) {
   if (loading) {
@@ -45,7 +23,7 @@ function ActivityItem({ item, loading }) {
 
   return (
     <li className={styles.item}>
-      <Initials name={item.actor} />
+      <Avatar user={{ username: item.actor }} size={28} className={styles.avatar} title={item.actor} />
       <div className={styles.content}>
         <p className={styles.text}>
           <span className={styles.actor}>{item.actor}</span>{' '}

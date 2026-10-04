@@ -104,11 +104,17 @@ class ProjectViewSet(viewsets.ModelViewSet):
         updated = serializer.save()
         changed = [key for key in previous if previous[key] != getattr(updated, key)]
         if changed:
+            details = {'fields': changed}
+            if (
+                previous['status'] != Project.Status.COMPLETED
+                and updated.status == Project.Status.COMPLETED
+            ):
+                details['celebration'] = 'PROJECT_COMPLETED'
             Activity.objects.create(
                 project=updated,
                 actor=self.request.user,
                 action=Activity.ActionTypes.PROJECT_UPDATED,
-                details={'fields': changed},
+                details=details,
             )
             notify_project_members(
                 project=updated,
@@ -356,9 +362,21 @@ class ProjectViewSet(viewsets.ModelViewSet):
             detail = error.message_dict if isinstance(error, ValidationError) else 'A project can only have one active sprint.'
             return Response({'detail': detail}, status=status.HTTP_400_BAD_REQUEST)
         action_type = Activity.ActionTypes.SPRINT_STARTED if new_status == Sprint.Status.ACTIVE else Activity.ActionTypes.SPRINT_COMPLETED
+        sprint_goal = sprint.tasks.filter(is_archived=False)
+        sprint_total = sprint_goal.count()
+        sprint_completed = sprint_goal.filter(status='COMPLETED').count()
+        completion_percent = round(sprint_completed * 100 / sprint_total) if sprint_total else 0
         Activity.objects.create(
             project=project, actor=request.user, action=action_type,
-            details={'sprint_id': sprint.id, 'sprint_name': sprint.name},
+            details={
+                'sprint_id': sprint.id,
+                'sprint_name': sprint.name,
+                **({
+                    'completion_percent': completion_percent,
+                    'completed_tasks': sprint_completed,
+                    'total_tasks': sprint_total,
+                } if new_status == Sprint.Status.COMPLETED else {}),
+            },
         )
         if new_status == Sprint.Status.ACTIVE:
             notify_project_members(
@@ -369,4 +387,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
                 title='Sprint started',
                 message=f'{sprint.name} has started.',
             )
+        else:
+            from progress.services import award_completed_sprint
+            award_completed_sprint(sprint)
         return Response(SprintSerializer(sprint).data)

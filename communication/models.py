@@ -86,6 +86,7 @@ class Notification(models.Model):
         MILESTONE_UPDATED = 'MILESTONE_UPDATED', 'Milestone updated'
         TASK_DUE = 'TASK_DUE', 'Task due'
         TASK_OVERDUE = 'TASK_OVERDUE', 'Task overdue'
+        MEMBER_RECOGNIZED = 'MEMBER_RECOGNIZED', 'Member recognized'
 
     recipient = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='notifications')
     actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='triggered_notifications')
@@ -98,6 +99,10 @@ class Notification(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE, null=True, blank=True)
     project = models.ForeignKey(Project, on_delete=models.CASCADE, null=True, blank=True)
     sprint = models.ForeignKey('projects.Sprint', on_delete=models.CASCADE, null=True, blank=True)
+    organization = models.ForeignKey(
+        'organizations.Organization', on_delete=models.CASCADE, null=True, blank=True,
+        related_name='notifications',
+    )
     dedupe_key = models.CharField(max_length=255, unique=True, null=True, blank=True)
     
     is_read = models.BooleanField(default=False)

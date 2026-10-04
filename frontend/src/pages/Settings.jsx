@@ -634,7 +634,7 @@ export default function Settings() {
         <nav className={styles.settingsNav} aria-label="Settings navigation">
           {allowedItems.map((item) => {
             const Icon = item.icon;
-            return <NavLink key={item.id} to={`/settings/${item.id}`} state={location.state} className={({ isActive }) => `${styles.navItem} ${isActive ? styles.navItemActive : ''}`}><Icon size={15} />{item.label}</NavLink>;
+            return <NavLink key={item.id} to={`/settings/${item.id}`} state={location.state} replace className={({ isActive }) => `${styles.navItem} ${isActive ? styles.navItemActive : ''}`}><Icon size={15} />{item.label}</NavLink>;
           })}
         </nav>
         <main className={styles.contentScroller}>

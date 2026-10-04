@@ -1,29 +1,24 @@
 import { NavLink } from 'react-router-dom';
 import {
-  LayoutDashboard,
-  Users,
-  FolderKanban,
-  CheckSquare,
-  UserRound,
-  Activity,
   Settings,
   ChevronLeft,
-  Building2,
 } from 'lucide-react';
+import FeatureIcon from '../visual/FeatureIcon';
 import styles from './Sidebar.module.css';
 
 const NAV_PRIMARY = [
-  { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/teams',     icon: Users,           label: 'Teams' },
-  { to: '/projects',  icon: FolderKanban,    label: 'Projects' },
-  { to: '/tasks',     icon: CheckSquare,     label: 'Tasks' },
+  { to: '/dashboard', feature: 'dashboard', label: 'Dashboard' },
+  { to: '/teams',     feature: 'teams',     label: 'Teams' },
+  { to: '/projects',  feature: 'projects',  label: 'Projects' },
+  { to: '/tasks',     feature: 'tasks',     label: 'Tasks' },
 ];
 
 const NAV_SECONDARY = [
-  { to: '/activity', icon: Activity,  label: 'Activity' },
+  { to: '/progress', feature: 'progress', label: 'Progress' },
+  { to: '/activity', feature: 'activity', label: 'Activity' },
 ];
 
-function NavItem({ to, icon: Icon, label, collapsed }) {
+function NavItem({ to, icon: Icon, feature, label, collapsed }) {
   return (
     <NavLink
       to={to}
@@ -32,7 +27,9 @@ function NavItem({ to, icon: Icon, label, collapsed }) {
       }
       title={collapsed ? label : undefined}
     >
-      <Icon size={15} strokeWidth={1.8} className={styles.navIcon} />
+      {feature
+        ? <FeatureIcon name={feature} size={16} className={styles.navIcon} />
+        : <Icon size={15} strokeWidth={1.8} className={styles.navIcon} />}
       {!collapsed && <span className={styles.navLabel}>{label}</span>}
     </NavLink>
   );

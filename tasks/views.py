@@ -148,14 +148,58 @@ class TaskViewSet(mixins.RetrieveModelMixin,
                 action=action_type, details=details,
             )
         if before['status'] != Task.Status.COMPLETED and updated.status == Task.Status.COMPLETED:
+            from progress.services import award_task_completion
+            award_task_completion(updated, self.request.user)
+            active_project_tasks = Project.objects.get(
+                pk=updated.project_id
+            ).tasks.filter(is_archived=False)
+            total_project_tasks = active_project_tasks.count()
+            completed_project_tasks = active_project_tasks.filter(
+                status=Task.Status.COMPLETED
+            ).count()
+            previous_completion = (
+                (completed_project_tasks - 1) * 100 / total_project_tasks
+                if total_project_tasks else 0
+            )
+            current_completion = (
+                completed_project_tasks * 100 / total_project_tasks
+                if total_project_tasks else 0
+            )
+            for threshold in (25, 50, 75):
+                if previous_completion < threshold <= current_completion and not Activity.objects.filter(
+                    project=updated.project,
+                    action=Activity.ActionTypes.PROJECT_UPDATED,
+                    details__celebration='PROJECT_PROGRESS',
+                    details__completion_percent=threshold,
+                ).exists():
+                    Activity.objects.create(
+                        project=updated.project,
+                        actor=self.request.user,
+                        action=Activity.ActionTypes.PROJECT_UPDATED,
+                        details={
+                            'celebration': 'PROJECT_PROGRESS',
+                            'completion_percent': threshold,
+                        },
+                    )
             for milestone in milestones:
                 milestone_tasks = list(milestone.tasks.all())
-                if milestone_tasks and all(item.status == Task.Status.COMPLETED for item in milestone_tasks):
+                already_celebrated = Activity.objects.filter(
+                    project=updated.project,
+                    action=Activity.ActionTypes.MILESTONE_COMPLETED,
+                    details__milestone_id=milestone.id,
+                ).exists()
+                if (
+                    milestone_tasks
+                    and all(item.status == Task.Status.COMPLETED for item in milestone_tasks)
+                    and not already_celebrated
+                ):
                     Activity.objects.create(
                         project=updated.project, task=updated, actor=self.request.user,
                         action=Activity.ActionTypes.MILESTONE_COMPLETED,
                         details={'milestone_id': milestone.id, 'milestone_title': milestone.title},
                     )
+                    from progress.services import award_completed_milestone
+                    award_completed_milestone(milestone, self.request.user)
                     notify_project_members(
                         project=updated.project,
                         actor=self.request.user,
@@ -164,6 +208,17 @@ class TaskViewSet(mixins.RetrieveModelMixin,
                         message=f'{milestone.title} was completed.',
                         dedupe_key=f'milestone-completed:{milestone.id}',
                     )
+        if before['status'] == Task.Status.BLOCKED and updated.status != Task.Status.BLOCKED:
+            from progress.services import award_xp
+            award_xp(
+                user=updated.assigned_to or self.request.user,
+                organization=updated.project.organization,
+                amount=10,
+                reason='BLOCKED_WORK_RESOLVED',
+                description=f'Resolved blocked task "{updated.title}"',
+                source_type='task',
+                source_id=updated.id,
+            )
 
     @action(detail=True, methods=['get', 'post'])
     def subtasks(self, request, pk=None):

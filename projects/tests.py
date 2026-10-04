@@ -225,6 +225,12 @@ class ProjectSprintAccessTests(TestCase):
         ))
         self.assertEqual(complete.status_code, 200)
         self.assertEqual(complete.data['status'], Sprint.Status.COMPLETED)
+        sprint_activity = Activity.objects.get(
+            project=self.project,
+            action=Activity.ActionTypes.SPRINT_COMPLETED,
+        )
+        self.assertEqual(sprint_activity.details['completion_percent'], 0)
+        self.assertNotIn('actor', sprint_activity.details)
 
     def test_viewer_can_read_but_cannot_create_or_start_sprints(self):
         sprint = Sprint.objects.create(

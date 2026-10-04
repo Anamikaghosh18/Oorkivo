@@ -1,0 +1,19 @@
+.icon {
+  display: inline-grid;
+  flex: 0 0 auto;
+  place-items: center;
+  vertical-align: middle;
+}
+
+.icon svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.sage { color: var(--color-sage-dark); }
+.moss { color: var(--color-moss); }
+.clay { color: var(--color-clay); }
+.amber { color: var(--color-amber); }
+.slate { color: var(--color-slate); }
+.plum { color: #806875; }

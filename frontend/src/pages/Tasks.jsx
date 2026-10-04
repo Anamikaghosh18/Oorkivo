@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -10,7 +10,6 @@ import {
   CircleDot,
   Columns3,
   FolderKanban,
-  ListTodo,
   MoreHorizontal,
   Pencil,
   Plus,
@@ -23,6 +22,7 @@ import {
 import AppShell from '../components/layout/AppShell';
 import Avatar from '../components/Avatar';
 import DropdownSelect from '../components/DropdownSelect';
+import FeatureIcon from '../components/visual/FeatureIcon';
 import OrganizationMemberSelector from '../components/OrganizationMemberSelector';
 import { useDashboard } from '../hooks/useDashboard';
 import { authApi, organizationsApi, projectsApi, tasksApi, teamsApi } from '../services/api';
@@ -143,7 +143,7 @@ function TaskLink({ task, children, className, linkState }) {
 function EmptyState({ title, detail }) {
   return (
     <div className={styles.emptyState}>
-      <ListTodo size={20} aria-hidden="true" />
+      <FeatureIcon name="tasks" size={20} />
       <strong>{title}</strong>
       <span>{detail}</span>
     </div>
@@ -226,6 +226,20 @@ export default function Tasks() {
     due_date: '',
     sprintId: '',
   });
+  const taskFormBaseline = useRef('');
+  const serializeTaskDraft = (task, sprint, isSprintFormOpen) => JSON.stringify({
+    task,
+    sprint,
+    sprintFormOpen: isSprintFormOpen,
+  });
+  const taskFormDirty = createOpen
+    && taskFormBaseline.current !== serializeTaskDraft(newTask, newSprint, sprintFormOpen);
+  const closeTaskForm = () => {
+    if (createSaving || (taskFormDirty && !window.confirm('Discard your unsaved task changes?'))) return false;
+    setCreateOpen(false);
+    setEditingTask(null);
+    return true;
+  };
 
   useEffect(() => {
     if (workspaceLoading) return undefined;
@@ -552,11 +566,17 @@ export default function Tasks() {
     setSprintFormOpen(false);
     setSprintError('');
     setNewSprint({ name: '', start_date: '', end_date: '', goal: '' });
-    setNewTask({
+    const blankTask = {
       projectId: String(manageableProjects[0]?.id ?? ''),
       title: '', description: '', priority: 'MEDIUM', status: 'TODO',
       assigned_to: '', due_date: '', sprintId: '',
-    });
+    };
+    setNewTask(blankTask);
+    taskFormBaseline.current = serializeTaskDraft(
+      blankTask,
+      { name: '', start_date: '', end_date: '', goal: '' },
+      false,
+    );
     setCreateOpen(true);
   };
 
@@ -567,7 +587,7 @@ export default function Tasks() {
     setSprintFormOpen(false);
     setSprintError('');
     setNewSprint({ name: '', start_date: '', end_date: '', goal: '' });
-    setNewTask({
+    const taskDraft = {
       projectId: String(task.project?.id ?? task.project ?? ''),
       title: task.title ?? '',
       description: task.description ?? '',
@@ -576,7 +596,10 @@ export default function Tasks() {
       assigned_to: String(task.assigned_to?.id ?? ''),
       due_date: task.due_date ?? '',
       sprintId: String(task.sprint?.id ?? ''),
-    });
+    };
+    const blankSprint = { name: '', start_date: '', end_date: '', goal: '' };
+    setNewTask(taskDraft);
+    taskFormBaseline.current = serializeTaskDraft(taskDraft, blankSprint, false);
     setCreateOpen(true);
   };
 
@@ -636,6 +659,7 @@ export default function Tasks() {
 
   const handleCreateTask = async (event) => {
     event.preventDefault();
+    if (createSaving) return;
     const project = projects.find((item) => String(item.id) === newTask.projectId);
     const canSave = editingTask ? canEditTask(editingTask) : canManageProject(project?.id);
     if (!project || !canSave || !newTask.title.trim()) return;
@@ -1174,14 +1198,14 @@ export default function Tasks() {
         {workspaceView === 'SPRINTS' && renderSprintWorkspace()}
 
         {createOpen && (
-          <div className={styles.drawerBackdrop} role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !createSaving) { setCreateOpen(false); setEditingTask(null); } }}>
+          <div className={styles.drawerBackdrop} role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) closeTaskForm(); }}>
             <section className={styles.taskDrawer} role="dialog" aria-modal="true" aria-labelledby="create-task-title">
-              <div className={styles.dialogHeader}><div><span className={styles.sectionEyebrow}>{editingTask ? 'Task details' : 'Add work'}</span><h2 id="create-task-title">{editingTask ? 'Edit task' : 'Create task'}</h2></div><button type="button" aria-label="Close" onClick={() => { setCreateOpen(false); setEditingTask(null); }} disabled={createSaving}>×</button></div>
+              <div className={styles.dialogHeader}><div><span className={styles.sectionEyebrow}>{editingTask ? 'Task details' : 'Add work'}</span><h2 id="create-task-title">{editingTask ? 'Edit task' : 'Create task'}</h2></div><button type="button" aria-label="Close" onClick={closeTaskForm} disabled={createSaving}>×</button></div>
               {!editingTask && !manageableProjects.length ? (
                 <div className={styles.noTaskProject}>
                   {loading ? <p role="status">Loading projects…</p> : <>
                     <p>A task needs an active project. Create a project first, then you can add work here.</p>
-                    <NavLink to="/projects" className={styles.projectLink} onClick={() => setCreateOpen(false)}>Go to projects <ChevronRight size={14} /></NavLink>
+                    <NavLink to="/projects" className={styles.projectLink} onClick={(event) => { if (!closeTaskForm()) event.preventDefault(); }}>Go to projects <ChevronRight size={14} /></NavLink>
                   </>}
                 </div>
               ) : (
@@ -1237,7 +1261,7 @@ export default function Tasks() {
                   <label>Due date<input type="date" value={newTask.due_date} onChange={(event) => setNewTask((current) => ({ ...current, due_date: event.target.value }))} /></label>
                 </div>
                 {createError && <p className={styles.inlineError} role="alert">{createError}</p>}
-                <div className={styles.drawerActions}><button type="button" className={styles.cancelButton} onClick={() => { setCreateOpen(false); setEditingTask(null); }} disabled={createSaving}>Cancel</button><button type="submit" className={styles.newTaskButton} disabled={createSaving || !newTask.title.trim() || !newTask.projectId}>{createSaving ? (editingTask ? 'Saving…' : 'Creating…') : (editingTask ? 'Save changes' : 'Create task')}</button></div>
+                <div className={styles.drawerActions}><button type="button" className={styles.cancelButton} onClick={closeTaskForm} disabled={createSaving}>Cancel</button><button type="submit" className={styles.newTaskButton} disabled={createSaving || !newTask.title.trim() || !newTask.projectId}>{createSaving ? (editingTask ? 'Saving…' : 'Creating…') : (editingTask ? 'Save changes' : 'Create task')}</button></div>
               </form>
               )}
             </section>

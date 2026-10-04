@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { NavLink, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { CalendarDays, CheckCircle2, Circle, Clock3, FolderKanban, Users, Plus, ChevronDown, Activity as ActivityIcon, UserPlus } from 'lucide-react';
@@ -157,7 +157,7 @@ export default function ProjectDetail() {
   const navigate = useNavigate();
   const location = useLocation();
   const hasBackground = Boolean(location.state?.backgroundLocation);
-  const taskLinkState = location.state ?? { backgroundLocation: { pathname: `/projects/${id}` } };
+  const taskLinkState = { backgroundLocation: location };
   const closeDetail = () => {
     if (hasBackground) navigate(-1);
     else navigate('/projects', { replace: true });
@@ -201,8 +201,11 @@ export default function ProjectDetail() {
   const [discussionError, setDiscussionError] = useState('');
   const [milestonesError, setMilestonesError] = useState('');
   const [activityError, setActivityError] = useState('');
+  const loadRequest = useRef(0);
 
   const load = useCallback(async () => {
+    const requestId = ++loadRequest.current;
+    const isCurrent = () => loadRequest.current === requestId;
     setLoading(true);
     setError('');
     setTasksError('');
@@ -218,8 +221,10 @@ export default function ProjectDetail() {
     setSprints([]);
     try {
       const userResult = await authApi.me();
+      if (!isCurrent()) return;
       const userOrg = selectCurrentOrganization(userResult.data);
       const projectResult = await projectsApi.get(id);
+      if (!isCurrent()) return;
       const loadedProject = projectResult.data;
       setProject(loadedProject);
       setUser(userResult.data);
@@ -232,13 +237,16 @@ export default function ProjectDetail() {
         projectsApi.members(id),
         currentOrg?.id ? organizationsApi.teams(currentOrg.id) : Promise.resolve({ data: [] }),
       ]);
+      if (!isCurrent()) return;
       if (currentOrg?.id) {
         try {
           const organizationMembersResult = await organizationsApi.members(currentOrg.id);
+          if (!isCurrent()) return;
           setOrganizationMembers(getRows(organizationMembersResult.data).filter(
             (membership) => membership.status === 'ACTIVE' && membership.is_active !== false,
           ));
         } catch (organizationMembersError) {
+          if (!isCurrent()) return;
           setOrganizationMembers([]);
           setOrganizationMembersError('Organization members could not be loaded, so project members cannot be added.');
         }
@@ -250,6 +258,7 @@ export default function ProjectDetail() {
         projectsApi.activity(id),
         projectsApi.sprints(id),
       ]);
+      if (!isCurrent()) return;
       if (milestonesResult.status === 'fulfilled') setMilestones(getRows(milestonesResult.value.data));
       else setMilestonesError('Project milestones could not be loaded.');
       if (activityResult.status === 'fulfilled') setActivity(getRows(activityResult.value.data));
@@ -267,6 +276,7 @@ export default function ProjectDetail() {
           .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
           .slice(0, 6);
         const commentResults = await Promise.allSettled(recentTasks.map((task) => tasksApi.comments(task.id)));
+        if (!isCurrent()) return;
         const recentComments = [];
         let commentsUnavailable = false;
         commentResults.forEach((result, index) => {
@@ -295,13 +305,14 @@ export default function ProjectDetail() {
         setTeamName(loadedProject.team?.name ?? '');
       }
     } catch (loadError) {
+      if (!isCurrent()) return;
       const status = loadError.response?.status;
       if (status === 404) setError('This project could not be found.');
       else if (status === 401) setError('Your session has expired. Please log in again.');
       else if (status === 403) setError('You do not have permission to view this project.');
       else setError('Project details could not be loaded. Please try again.');
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
   }, [id]);
 
@@ -317,7 +328,10 @@ export default function ProjectDetail() {
     return () => { active = false; };
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+    return () => { loadRequest.current += 1; };
+  }, [load]);
 
   const completedCount = tasks.filter((task) => task.status === 'COMPLETED').length;
   const progress = tasks.length ? Math.round((completedCount / tasks.length) * 100) : 0;

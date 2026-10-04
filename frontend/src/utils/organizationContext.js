@@ -27,5 +27,5 @@ export function selectCurrentOrganization(user) {
 
 export function activateOrganization(organizationId) {
   localStorage.setItem('current_organization_id', String(organizationId));
-  window.location.reload();
+  window.location.replace('/dashboard');
 }

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import AuthLayout, { GoogleIcon } from '../components/auth/AuthLayout';
 import { authApi } from '../services/api';
@@ -8,6 +8,7 @@ import styles from './AuthForms.module.css'; // Shared form styles
 export default function Login({ onSuccess }) {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const [email,    setEmail]    = useState('');
   const [password, setPassword] = useState('');
@@ -16,6 +17,7 @@ export default function Login({ onSuccess }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (loading) return;
     setError(null);
     setLoading(true);
     try {
@@ -26,7 +28,14 @@ export default function Login({ onSuccess }) {
         localStorage.setItem('current_organization_id', String(response.data.organization_id));
       }
       if (onSuccess) onSuccess();
-      else navigate('/dashboard');
+      else {
+        const returnTo = location.state?.from;
+        const destination = returnTo?.pathname?.startsWith('/')
+          && !returnTo.pathname.startsWith('//')
+          ? { pathname: returnTo.pathname, search: returnTo.search, hash: returnTo.hash }
+          : '/dashboard';
+        navigate(invitationToken ? '/dashboard' : destination, { replace: true });
+      }
     } catch (err) {
       const status = err.response?.status;
       if (status === 401) setError('Invalid email or password.');

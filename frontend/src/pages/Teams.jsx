@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { createPortal } from 'react-dom';
-import { Archive, Building2, ChevronDown, ChevronUp, FolderKanban, MoreHorizontal, Pencil, Plus, Search, Trash2, Users, X } from 'lucide-react';
+import { Archive, ChevronDown, ChevronUp, MoreHorizontal, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
 import AppShell from '../components/layout/AppShell';
 import Avatar from '../components/Avatar';
+import FeatureIcon from '../components/visual/FeatureIcon';
+import IdentityMark from '../components/visual/IdentityMark';
 import OrganizationMemberSelector from '../components/OrganizationMemberSelector';
 import { useDashboard } from '../hooks/useDashboard';
 import { organizationsApi, teamsApi } from '../services/api';
@@ -125,6 +127,7 @@ export default function Teams() {
   const [memberError, setMemberError] = useState('');
   const [memberSaving, setMemberSaving] = useState(false);
   const [memberRemoval, setMemberRemoval] = useState(null);
+  const latestTeamLoad = useRef(0);
 
   const canManageTeam = (team) => Boolean(org?.permissions?.can_manage_members)
     || (membersByTeam[team.id]?.members ?? []).some((membership) =>
@@ -132,8 +135,15 @@ export default function Teams() {
       && membership.role === 'LEAD');
 
   const loadTeams = useCallback(async () => {
+    const requestId = ++latestTeamLoad.current;
+    const isCurrent = () => latestTeamLoad.current === requestId;
     if (!org?.id) {
-      if (!workspaceLoading) setLoading(false);
+      if (!workspaceLoading) {
+        setTeams([]);
+        setOrganizationMembers([]);
+        setMembersByTeam({});
+        setLoading(false);
+      }
       return;
     }
     setLoading(true);
@@ -143,6 +153,7 @@ export default function Teams() {
         organizationsApi.teams(org.id),
         organizationsApi.members(org.id),
       ]);
+      if (!isCurrent()) return;
       const loadedTeams = getRows(response.data);
       setTeams(loadedTeams);
       setOrganizationMembers(getRows(organizationMemberResponse.data).filter((membership) =>
@@ -160,16 +171,18 @@ export default function Teams() {
           }];
         }
       }));
+      if (!isCurrent()) return;
       setMembersByTeam(Object.fromEntries(memberships));
     } catch (loadError) {
-      setError(getErrorMessage(loadError, 'Could not load teams. Please try again.'));
+      if (isCurrent()) setError(getErrorMessage(loadError, 'Could not load teams. Please try again.'));
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
   }, [org?.id, workspaceLoading]);
 
   useEffect(() => {
     loadTeams();
+    return () => { latestTeamLoad.current += 1; };
   }, [loadTeams]);
 
   useEffect(() => {
@@ -196,7 +209,7 @@ export default function Teams() {
   const handleCreateTeam = async (event) => {
     event.preventDefault();
     const name = teamName.trim();
-    if (!name || !org?.id) return;
+    if (creating || !name || !org?.id) return;
     setCreating(true);
     setCreateError('');
     try {
@@ -407,15 +420,15 @@ export default function Teams() {
 
         <section className={styles.summary} aria-label="Team summary">
           <div className={styles.summaryItem}>
-            <span className={styles.summaryIcon}><Building2 size={16} /></span>
+            <span className={styles.summaryIcon}><FeatureIcon name="teams" size={16} /></span>
             <span><small>Teams</small><strong>{loading ? '—' : teams.length}</strong></span>
           </div>
           <div className={styles.summaryItem}>
-            <span className={styles.summaryIcon}><Users size={16} /></span>
+            <span className={styles.summaryIcon}><FeatureIcon name="members" size={16} /></span>
             <span><small>People across teams</small><strong>{loading ? '—' : totalMembers}</strong></span>
           </div>
           <div className={styles.summaryItem}>
-            <span className={styles.summaryIcon}><FolderKanban size={16} /></span>
+            <span className={styles.summaryIcon}><FeatureIcon name="projects" size={16} /></span>
             <span><small>Projects with a team</small><strong>{workspaceLoading ? '—' : projects.filter((project) => project.team).length}</strong></span>
           </div>
         </section>
@@ -441,16 +454,15 @@ export default function Teams() {
             <div className={styles.state}>Loading teams and shared work…</div>
           ) : filteredTeams.length === 0 ? (
             <div className={styles.empty}>
-              <Users size={24} />
+              <FeatureIcon name="teams" size={24} />
               <strong>{teams.length ? 'No teams match your search' : 'No teams yet'}</strong>
               <span>{teams.length ? 'Try a different search.' : 'Create a team to bring people together around shared work.'}</span>
             </div>
           ) : (
-            filteredTeams.map((team, index) => {
+            filteredTeams.map((team) => {
               const memberData = membersByTeam[team.id] ?? { members: [], loading: false, error: '' };
               const expanded = expandedTeam === team.id;
               const summary = countForTeam(team, projects, tasks, memberData.members);
-              const tones = [styles.markSand, styles.markSage, styles.markClay, styles.markStone];
               return (
                 <article className={styles.teamCard} id={`team-${team.id}`} key={team.id}>
                   <button
@@ -459,7 +471,7 @@ export default function Teams() {
                     onClick={() => toggleMembers(team.id)}
                     aria-expanded={expanded}
                   >
-                    <span className={`${styles.teamMark} ${tones[index % tones.length]}`}><Users size={17} /></span>
+                    <IdentityMark name={team.name} kind="team" size={42} className={styles.teamMark} />
                     <span className={styles.teamInfo}>
                       <strong>{team.name}</strong>
                       <small>{summary.projects.length} {summary.projects.length === 1 ? 'project' : 'projects'} · {summary.tasks.length} tasks</small>

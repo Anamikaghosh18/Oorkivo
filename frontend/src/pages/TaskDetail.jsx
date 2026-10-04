@@ -161,7 +161,7 @@ export default function TaskDetail() {
   const navigate = useNavigate();
   const location = useLocation();
   const hasBackground = Boolean(location.state?.backgroundLocation);
-  const taskLinkState = location.state;
+  const taskLinkState = { backgroundLocation: location };
   const closeDetail = () => {
     if (hasBackground) navigate(-1);
     else navigate("/tasks", { replace: true });

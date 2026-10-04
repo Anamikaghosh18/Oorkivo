@@ -413,11 +413,6 @@
   border-radius: 13px 13px 13px 5px;
 }
 
-.markSand { background: var(--color-amber-bg); color: var(--color-amber); }
-.markSage { background: var(--color-sage-light); color: var(--color-sage-dark); }
-.markClay { background: var(--color-clay-bg); color: var(--color-clay); }
-.markStone { background: var(--color-slate-bg); color: var(--color-slate); }
-
 .teamInfo {
   display: flex;
   min-width: 0;

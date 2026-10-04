@@ -1,6 +1,8 @@
 import { Navigate, NavLink, useLocation } from 'react-router-dom';
-import { ArrowUpRight, CalendarDays, CheckCircle2, FolderKanban } from 'lucide-react';
+import { ArrowUpRight, CalendarDays, CheckCircle2 } from 'lucide-react';
 import AppShell from '../components/layout/AppShell';
+import FeatureIcon from '../components/visual/FeatureIcon';
+import IdentityMark from '../components/visual/IdentityMark';
 import { useDashboard } from '../hooks/useDashboard';
 import styles from './Dashboard.module.css';
 
@@ -31,15 +33,8 @@ function formatTime(value) {
   return date.toLocaleString('en', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 }
 
-function initials(name = '') {
-  return name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase();
-}
-
 function ProjectMark({ name = '' }) {
-  const mark = initials(name).slice(0, 2) || '•';
-  const variants = [styles.markClay, styles.markSage, styles.markSand, styles.markSlate];
-  const index = [...name].reduce((sum, char) => sum + char.charCodeAt(0), 0) % variants.length;
-  return <span className={`${styles.projectMark} ${variants[index]}`}>{mark}</span>;
+  return <IdentityMark name={name} size={30} className={styles.projectMark} />;
 }
 
 function getTaskCounts(tasks, projectId) {
@@ -176,7 +171,7 @@ export default function Dashboard() {
             </div>
           ) : (
             <div className={styles.sectionEmpty}>
-              <FolderKanban size={18} />
+              <FeatureIcon name="projects" size={18} />
               <span>No active projects right now.</span>
               <NavLink to="/projects">Browse projects</NavLink>
             </div>

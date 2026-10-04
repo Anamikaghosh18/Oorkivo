@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { ArrowDownUp, CalendarDays, Check, FolderKanban, MoreHorizontal, Pencil, Plus, Search, X } from 'lucide-react';
+import { ArrowDownUp, CalendarDays, Check, MoreHorizontal, Pencil, Plus, Search, X } from 'lucide-react';
 import AppShell from '../components/layout/AppShell';
 import DropdownSelect from '../components/DropdownSelect';
+import FeatureIcon from '../components/visual/FeatureIcon';
+import IdentityMark from '../components/visual/IdentityMark';
 import OrganizationMemberSelector from '../components/OrganizationMemberSelector';
 import { organizationsApi, projectsApi } from '../services/api';
 import { useProjects } from '../hooks/useProjects';
@@ -36,10 +38,7 @@ function teamId(project) {
 }
 
 function ProjectMark({ project }) {
-  const initials = project.name.trim().split(/\s+/).slice(0, 2).map((word) => word[0]).join('').toUpperCase();
-  const options = [styles.markOrb, styles.markGrid, styles.markSquare, styles.markRing];
-  const identity = [...project.name].reduce((sum, char) => sum + char.charCodeAt(0), 0) % options.length;
-  return <span className={`${styles.projectMark} ${options[identity]}`} aria-hidden="true">{initials}</span>;
+  return <IdentityMark name={project.name} size={42} className={styles.projectMark} />;
 }
 
 function MemberAvatars({ members }) {
@@ -119,7 +118,7 @@ function ProjectRow({ project, teamName, canManage, onEdit, onArchive, linkState
 
           <div className={styles.projectMeta}>
             <span className={styles.metaItem}>
-              <FolderKanban size={13} />
+              <FeatureIcon name="projects" size={14} />
               {tasks ? `${total} tasks · ${completed} completed` : 'Task totals unavailable'}
             </span>
             <span className={`${styles.metaItem} ${overdue ? styles.overdue : ''}`}>
@@ -164,6 +163,21 @@ export default function Projects() {
   const [projectMemberships, setProjectMemberships] = useState([]);
   const [projectMemberIds, setProjectMemberIds] = useState([]);
   const [form, setForm] = useState({ name: '', description: '', status: 'PLANNING', team: '', start_date: '', target_end_date: '' });
+  const projectMemberLoad = useRef(0);
+  const projectFormBaseline = useRef('');
+
+  const serializeProjectDraft = (draft, memberIds) => JSON.stringify({
+    form: draft,
+    memberIds: memberIds.map(String).sort(),
+  });
+  const projectFormDirty = createOpen
+    && projectFormBaseline.current !== serializeProjectDraft(form, projectMemberIds);
+  const closeProjectForm = () => {
+    if (creating || (projectFormDirty && !window.confirm('Discard your unsaved project changes?'))) return;
+    projectMemberLoad.current += 1;
+    setProjectMembersLoading(false);
+    setCreateOpen(false);
+  };
 
   useEffect(() => {
     if (!org?.id) {
@@ -208,8 +222,11 @@ export default function Projects() {
   };
 
   const openCreate = () => {
+    projectMemberLoad.current += 1;
     setEditingProject(null);
-    setForm({ name: '', description: '', status: 'PLANNING', team: '', start_date: '', target_end_date: '' });
+    const blankForm = { name: '', description: '', status: 'PLANNING', team: '', start_date: '', target_end_date: '' };
+    setForm(blankForm);
+    projectFormBaseline.current = serializeProjectDraft(blankForm, []);
     setCreateError('');
     setProjectMemberError('');
     setProjectMembersLoading(false);
@@ -219,20 +236,24 @@ export default function Projects() {
   };
 
   const openEdit = async (project) => {
-    setEditingProject(project);
-    setForm({
+    const requestId = ++projectMemberLoad.current;
+    setProjectMembersLoading(project.members === null);
+    const projectForm = {
       name: project.name ?? '',
       description: project.description ?? '',
       status: project.status ?? 'PLANNING',
       team: teamId(project) ? String(teamId(project)) : '',
       start_date: project.start_date ?? '',
       target_end_date: project.target_end_date ?? '',
-    });
+    };
+    setEditingProject(project);
+    setForm(projectForm);
     setCreateError('');
     setProjectMemberError('');
     const existingMemberships = project.members ?? [];
     const selectedIds = existingMemberships.map((membership) =>
       String(membership.user?.id ?? membership.user));
+    projectFormBaseline.current = serializeProjectDraft(projectForm, selectedIds);
     setProjectMemberships(existingMemberships);
     setProjectMemberIds(selectedIds);
     setCreateOpen(true);
@@ -240,20 +261,24 @@ export default function Projects() {
       setProjectMembersLoading(true);
       try {
         const { data } = await projectsApi.members(project.id);
+        if (projectMemberLoad.current !== requestId) return;
         const memberships = data?.results ?? data;
         const ids = memberships.map((membership) => String(membership.user?.id ?? membership.user));
         setProjectMemberships(memberships);
         setProjectMemberIds(ids);
+        projectFormBaseline.current = serializeProjectDraft(projectForm, ids);
       } catch (loadError) {
-        setProjectMemberError(loadError.response?.data?.detail ?? 'Project members could not be loaded. Try closing and reopening the editor.');
+        if (projectMemberLoad.current === requestId) {
+          setProjectMemberError(loadError.response?.data?.detail ?? 'Project members could not be loaded. Try closing and reopening the editor.');
+        }
       } finally {
-        setProjectMembersLoading(false);
+        if (projectMemberLoad.current === requestId) setProjectMembersLoading(false);
       }
     }
   };
 
   const handleDelete = async () => {
-    if (!deleteTarget) return;
+    if (!deleteTarget || deleting) return;
     setDeleting(true);
     setDeleteError('');
     try {
@@ -269,7 +294,7 @@ export default function Projects() {
 
   const handleCreate = async (event) => {
     event.preventDefault();
-    if (projectMemberError || projectMembersLoading) return;
+    if (creating || projectMemberError || projectMembersLoading) return;
     setCreating(true);
     setCreateError('');
     try {
@@ -306,6 +331,7 @@ export default function Projects() {
       setProjectMemberships([]);
       setProjectMemberIds([]);
       setProjectMemberError('');
+      projectMemberLoad.current += 1;
       setCreateOpen(false);
     } catch (createErrorResponse) {
       const detail = createErrorResponse.response?.data?.detail;
@@ -330,9 +356,9 @@ export default function Projects() {
         </header>
 
         {createOpen && (
-          <div className={styles.drawerBackdrop} role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !creating) setCreateOpen(false); }}>
+          <div className={styles.drawerBackdrop} role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) closeProjectForm(); }}>
             <section className={styles.projectDrawer} role="dialog" aria-modal="true" aria-labelledby="create-project-title">
-              <header className={styles.drawerHeader}><div><span className={styles.eyebrow}>Workspace</span><h2 id="create-project-title">{editingProject ? 'Edit project' : 'Create project'}</h2><p>{editingProject ? 'Update project details and delivery dates.' : 'Set up a workspace for shared delivery.'}</p></div><button type="button" aria-label="Close" onClick={() => setCreateOpen(false)} disabled={creating}><X size={18} /></button></header>
+              <header className={styles.drawerHeader}><div><span className={styles.eyebrow}>Workspace</span><h2 id="create-project-title">{editingProject ? 'Edit project' : 'Create project'}</h2><p>{editingProject ? 'Update project details and delivery dates.' : 'Set up a workspace for shared delivery.'}</p></div><button type="button" aria-label="Close" onClick={closeProjectForm} disabled={creating}><X size={18} /></button></header>
               <form className={styles.drawerForm} onSubmit={handleCreate}>
                 <label className={styles.formField}><span>Project name</span><input required maxLength={255} value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} autoFocus /></label>
                 <label className={styles.formField}><span>Description</span><textarea rows={3} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} /></label>
@@ -355,7 +381,7 @@ export default function Projects() {
                 {projectMemberError && <p className={styles.formError} role="alert">{projectMemberError}</p>}
                 {memberLoadError && <p className={styles.formError} role="alert">{memberLoadError}</p>}
                 {createError && <p className={styles.formError} role="alert">{createError}</p>}
-                <div className={styles.drawerActions}><button type="button" className={styles.cancelButton} onClick={() => setCreateOpen(false)} disabled={creating}>Cancel</button><button type="submit" className={styles.createSubmit} disabled={creating || projectMembersLoading || Boolean(projectMemberError) || !form.name.trim()}><Check size={14} />{creating ? (editingProject ? 'Saving…' : 'Creating…') : (editingProject ? 'Save changes' : 'Create project')}</button></div>
+                <div className={styles.drawerActions}><button type="button" className={styles.cancelButton} onClick={closeProjectForm} disabled={creating}>Cancel</button><button type="submit" className={styles.createSubmit} disabled={creating || projectMembersLoading || Boolean(projectMemberError) || !form.name.trim()}><Check size={14} />{creating ? (editingProject ? 'Saving…' : 'Creating…') : (editingProject ? 'Save changes' : 'Create project')}</button></div>
               </form>
             </section>
           </div>
@@ -432,7 +458,7 @@ export default function Projects() {
             })
           ) : (
             <div className={styles.emptyState}>
-              <FolderKanban size={22} />
+              <FeatureIcon name="projects" size={24} />
               <strong>{projects.length ? 'No projects match these filters' : 'No projects yet'}</strong>
               <span>{projects.length ? 'Try changing your search or filters.' : 'Create a project to start organizing work.'}</span>
               {!projects.length && canCreateProjects && <button type="button" onClick={openCreate}>Create project</button>}

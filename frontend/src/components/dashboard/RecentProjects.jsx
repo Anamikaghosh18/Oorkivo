@@ -1,4 +1,5 @@
 import styles from './RecentProjects.module.css';
+import IdentityMark from '../visual/IdentityMark';
 
 const STATUS_META = {
   ACTIVE:    { label: 'Active',    cls: 'active',    dot: 'var(--color-sage-dark)' },
@@ -8,16 +9,8 @@ const STATUS_META = {
 };
 
 function ProjectMonogram({ name }) {
-  const initials = name
-    .split(' ')
-    .map(w => w[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
   return (
-    <div className={styles.monogram}>
-      {initials}
-    </div>
+    <IdentityMark name={name} size={30} className={styles.monogram} />
   );
 }
 

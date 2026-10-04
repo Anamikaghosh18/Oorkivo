@@ -1,4 +1,5 @@
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
 import Dashboard  from './pages/Dashboard';
 import Projects   from './pages/Projects';
 import ProjectDetail from './pages/ProjectDetail';
@@ -6,6 +7,7 @@ import Tasks      from './pages/Tasks';
 import Teams      from './pages/Teams';
 import TaskDetail from './pages/TaskDetail';
 import Settings from './pages/Settings';
+import Progress from './pages/Progress';
 import Onboarding from './pages/Onboarding';
 import InvitationAcceptance from './pages/InvitationAcceptance';
 import Login      from './pages/Login';
@@ -13,8 +15,9 @@ import Signup     from './pages/Signup';
 import './index.css';
 
 function RequireAuth({ children }) {
+  const location = useLocation();
   const token = localStorage.getItem('access_token');
-  if (!token) return <Navigate to="/login" replace />;
+  if (!token) return <Navigate to="/login" replace state={{ from: location }} />;
   return children;
 }
 
@@ -28,7 +31,16 @@ export default function App() {
 
 function AppRoutes() {
   const location = useLocation();
+  const navigate = useNavigate();
   const backgroundLocation = location.state?.backgroundLocation;
+
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      navigate('/login', { replace: true, state: { from: location } });
+    };
+    window.addEventListener('oorkivo:session-expired', handleSessionExpired);
+    return () => window.removeEventListener('oorkivo:session-expired', handleSessionExpired);
+  }, [location, navigate]);
 
   return (
     <>
@@ -46,6 +58,7 @@ function AppRoutes() {
         <Route path="/settings/:section" element={<RequireAuth><Settings /></RequireAuth>} />
         <Route path="/profile" element={<RequireAuth><Navigate to="/settings/profile" replace /></RequireAuth>} />
         <Route path="/teams" element={<RequireAuth><Teams /></RequireAuth>} />
+        <Route path="/progress" element={<RequireAuth><Progress /></RequireAuth>} />
         <Route path="/tasks" element={<RequireAuth><Tasks /></RequireAuth>} />
         <Route path="/members" element={<RequireAuth><Placeholder label="Members" /></RequireAuth>} />
         <Route path="/activity" element={<RequireAuth><Placeholder label="Activity" /></RequireAuth>} />

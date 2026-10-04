@@ -21,27 +21,47 @@ apiClient.interceptors.request.use((config) => {
 });
 
 // Handle 401 → clear tokens (redirect handled by auth context when implemented)
+let refreshRequest;
+
 apiClient.interceptors.response.use(
   (res) => res,
   async (err) => {
     const original = err.config;
-    if (err.response?.status === 401 && !original._retry) {
+    if (err.response?.status === 401 && original && !original._retry
+      && !['/auth/login/', '/auth/register/'].includes(original.url)) {
       original._retry = true;
       const refresh = localStorage.getItem('refresh_token');
       if (refresh) {
         try {
-          const { data } = await axios.post(`${BASE_URL}/auth/token/refresh/`, { refresh });
+          refreshRequest ??= axios.post(`${BASE_URL}/auth/token/refresh/`, { refresh })
+            .finally(() => { refreshRequest = null; });
+          const { data } = await refreshRequest;
           localStorage.setItem('access_token', data.access);
           original.headers.Authorization = `Bearer ${data.access}`;
           return apiClient(original);
         } catch {
           localStorage.removeItem('access_token');
           localStorage.removeItem('refresh_token');
+          window.dispatchEvent(new Event('oorkivo:session-expired'));
         }
       }
     }
     return Promise.reject(err);
   }
+);
+
+apiClient.interceptors.response.use(
+  (res) => res,
+  (err) => {
+    const url = err.config?.url;
+    const isCredentialSubmission = ['/auth/login/', '/auth/register/'].includes(url);
+    if (err.response?.status === 401 && err.config && !isCredentialSubmission) {
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      window.dispatchEvent(new Event('oorkivo:session-expired'));
+    }
+    return Promise.reject(err);
+  },
 );
 
 export default apiClient;
@@ -154,4 +174,13 @@ export const communicationApi = {
   notifications:     ()         => apiClient.get('/notifications/'),
   readNotification:  (id)       => apiClient.patch(`/notifications/${id}/read/`),
   readAllNotifications: ()      => apiClient.patch('/notifications/read-all/'),
+};
+
+export const progressApi = {
+  mine: () => apiClient.get('/progress/me/'),
+  members: () => apiClient.get('/progress/members/'),
+  overview: (params) => apiClient.get('/progress/overview/', { params }),
+  celebrations: () => apiClient.get('/progress/celebrations/'),
+  recognitions: () => apiClient.get('/progress/recognitions/'),
+  recognize: (data) => apiClient.post('/progress/recognitions/', data),
 };

@@ -26,6 +26,7 @@ export default function Onboarding() {
 
   const createWorkspace = async (event) => {
     event.preventDefault();
+    if (saving) return;
     setSaving(true);
     setError('');
     try {
@@ -43,6 +44,7 @@ export default function Onboarding() {
 
   const joinWorkspace = async (event) => {
     event.preventDefault();
+    if (saving) return;
     setSaving(true);
     setError('');
     try {
