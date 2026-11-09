@@ -139,6 +139,10 @@ export const projectsApi = {
   deleteSprint: (id, sprintId) => apiClient.delete(`/projects/${id}/sprints/${sprintId}/`),
   startSprint: (id, sprintId) => apiClient.post(`/projects/${id}/sprints/${sprintId}/start/`),
   completeSprint: (id, sprintId) => apiClient.post(`/projects/${id}/sprints/${sprintId}/complete/`),
+  documents: (id) => apiClient.get(`/projects/${id}/documents/`),
+  createDocument: (id, data) => apiClient.post(`/projects/${id}/documents/`, data),
+  updateDocument: (id, documentId, data) => apiClient.patch(`/projects/${id}/documents/${documentId}/`, data),
+  deleteDocument: (id, documentId) => apiClient.delete(`/projects/${id}/documents/${documentId}/`),
 };
 
 // ─── Tasks ────────────────────────────────────────────────────────
