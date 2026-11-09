@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { NavLink, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { CalendarDays, CheckCircle2, Circle, Clock3, FolderKanban, Users, Plus, ChevronDown, Activity as ActivityIcon, UserPlus, FileText, Eye, Pencil, Trash2, Bold, Italic, Code, Link, List, Search, BookOpen } from 'lucide-react';
+import { CalendarDays, CheckCircle2, Circle, Clock3, FolderKanban, Users, Plus, ChevronDown, Activity as ActivityIcon, UserPlus, FileText, Eye, Pencil, Trash2, Bold, Italic, Code, Link, List, Search, BookOpen, Heading1, Heading2, Minus, Quote, Image as ImageIcon, Undo, Redo } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import OverlayDetailShell from '../components/layout/OverlayDetailShell';
@@ -228,8 +228,29 @@ export default function ProjectDetail() {
     const after = text.substring(end);
     const newText = before + prefix + selected + suffix + after;
     setDocumentForm((form) => ({ ...form, content: newText }));
-    textarea.focus();
-    textarea.setSelectionRange(start + prefix.length, start + prefix.length + selected.length + suffix.length);
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + prefix.length, start + prefix.length + selected.length + suffix.length);
+    }, 0);
+  };
+
+  const insertAtCursor = (text) => {
+    const textarea = documentTextareaRef.current;
+    if (!textarea) return;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const before = textarea.value.substring(0, start);
+    const after = textarea.value.substring(end);
+    const newText = before + text + after;
+    setDocumentForm((form) => ({ ...form, content: newText }));
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + text.length, start + text.length);
+    }, 0);
+  };
+
+  const insertCheckbox = () => {
+    insertMarkdown('\n- [ ] ', '');
   };
 
   const load = useCallback(async () => {
@@ -1111,10 +1132,23 @@ export default function ProjectDetail() {
                       <div className={styles.markdownToolbar}>
                         <button type="button" onClick={() => insertMarkdown('**', '**')} title="Bold"><Bold size={14} /></button>
                         <button type="button" onClick={() => insertMarkdown('*', '*')} title="Italic"><Italic size={14} /></button>
-                        <button type="button" onClick={() => insertMarkdown('`', '`')} title="Code"><Code size={14} /></button>
+                        <button type="button" onClick={() => insertMarkdown('`', '`')} title="Inline code"><Code size={14} /></button>
+                        <button type="button" onClick={() => insertMarkdown('\n```\n', '\n```\n')} title="Code block"><Code size={14} /></button>
+                        <div className={styles.toolbarDivider} />
+                        <button type="button" onClick={() => insertMarkdown('\n# ', '')} title="Heading 1"><Heading1 size={14} /></button>
+                        <button type="button" onClick={() => insertMarkdown('\n## ', '')} title="Heading 2"><Heading2 size={14} /></button>
+                        <button type="button" onClick={() => insertMarkdown('\n### ', '')} title="Heading 3"><Search size={14} /></button>
+                        <div className={styles.toolbarDivider} />
+                        <button type="button" onClick={() => insertMarkdown('\n- ', '')} title="Bullet list"><List size={14} /></button>
+                        <button type="button" onClick={() => insertMarkdown('\n1. ', '')} title="Numbered list"><List size={14} /></button>
+                        <button type="button" onClick={insertCheckbox} title="Checkbox"><Minus size={14} /></button>
+                        <div className={styles.toolbarDivider} />
+                        <button type="button" onClick={() => insertMarkdown('> ', '')} title="Blockquote"><Quote size={14} /></button>
+                        <button type="button" onClick={() => insertMarkdown('---\n', '')} title="Horizontal rule"><Minus size={14} /></button>
                         <button type="button" onClick={() => insertMarkdown('[', '](url)')} title="Link"><Link size={14} /></button>
-                        <button type="button" onClick={() => insertMarkdown('\n- ')} title="List"><List size={14} /></button>
-                        <button type="button" onClick={() => insertMarkdown('\n## ')} title="Heading"><Search size={14} /></button>
+                        <button type="button" onClick={() => insertMarkdown('\n![](url)', '')} title="Image"><ImageIcon size={14} /></button>
+                        <div className={styles.toolbarDivider} />
+                        <button type="button" onClick={() => insertAtCursor('\n\n')} title="Add line break">¶</button>
                       </div>
                       <textarea ref={documentTextareaRef} value={documentForm.content} onChange={(event) => setDocumentForm((form) => ({ ...form, content: event.target.value }))} placeholder="Write Markdown here..." disabled={!canManageDocuments} />
                     </div>
