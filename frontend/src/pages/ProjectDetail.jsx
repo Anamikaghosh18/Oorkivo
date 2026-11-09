@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { NavLink, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { CalendarDays, CheckCircle2, Circle, Clock3, FolderKanban, Users, Plus, ChevronDown, Activity as ActivityIcon, UserPlus, FileText, Eye, Pencil, Trash2 } from 'lucide-react';
+import { CalendarDays, CheckCircle2, Circle, Clock3, FolderKanban, Users, Plus, ChevronDown, Activity as ActivityIcon, UserPlus, FileText, Eye, Pencil, Trash2, Bold, Italic, Code, Link, List, Search, BookOpen } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import OverlayDetailShell from '../components/layout/OverlayDetailShell';
@@ -210,7 +210,26 @@ export default function ProjectDetail() {
   const [documentPreviewMode, setDocumentPreviewMode] = useState(false);
   const [documentSaving, setDocumentSaving] = useState(false);
   const [documentError, setDocumentError] = useState('');
+  const [documentVersions, setDocumentVersions] = useState([]);
+  const [showVersions, setShowVersions] = useState(false);
+  const [documentSearch, setDocumentSearch] = useState('');
+  const [tableOfContents, setTableOfContents] = useState([]);
   const loadRequest = useRef(0);
+
+  const insertMarkdown = (prefix, suffix = '') => {
+    const textarea = document.querySelector('.documentEditor textarea');
+    if (!textarea) return;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = textarea.value;
+    const before = text.substring(0, start);
+    const selected = text.substring(start, end);
+    const after = text.substring(end);
+    const newText = before + prefix + selected + suffix + after;
+    setDocumentForm((form) => ({ ...form, content: newText }));
+    textarea.focus();
+    textarea.setSelectionRange(start + prefix.length, start + prefix.length + selected.length + suffix.length);
+  };
 
   const load = useCallback(async () => {
     const requestId = ++loadRequest.current;
@@ -538,7 +557,7 @@ export default function ProjectDetail() {
     ['MANAGER', 'CONTRIBUTOR'].includes(membership.role)
   ) || Boolean(org?.permissions?.can_manage_members);
 
-  const openDocument = (document) => {
+  const openDocument = async (document) => {
     setDocumentForm({
       id: document.id,
       title: document.title,
@@ -546,6 +565,16 @@ export default function ProjectDetail() {
     });
     setDocumentPreviewMode(false);
     setDocumentEditorOpen(true);
+    setDocumentVersions([]);
+    setShowVersions(false);
+    if (document.id) {
+      try {
+        const response = await projectsApi.documentVersions(id, document.id);
+        setDocumentVersions(response.data);
+      } catch (err) {
+        console.error('Failed to load versions', err);
+      }
+    }
   };
 
   const closeDocument = () => {
@@ -605,6 +634,42 @@ export default function ProjectDetail() {
     } catch (deleteError) {
       const detail = deleteError.response?.data?.detail;
       setDocumentError(typeof detail === 'string' ? detail : 'Document could not be deleted. Check your permissions.');
+    } finally {
+      setDocumentSaving(false);
+    }
+  };
+
+  const togglePin = async (document) => {
+    try {
+      const response = await projectsApi.pinDocument(id, document.id);
+      setDocuments((current) => current.map((doc) => doc.id === document.id ? response.data : doc));
+    } catch (err) {
+      console.error('Failed to pin document', err);
+    }
+  };
+
+  const revertToVersion = async (version) => {
+    if (!confirm(`Revert to version from ${new Date(version.created_at).toLocaleString()}?`)) return;
+    setDocumentSaving(true);
+    setDocumentError('');
+    try {
+      const response = await projectsApi.updateDocument(id, documentForm.id, {
+        title: version.title,
+        content: version.content,
+        change_summary: `Reverted to version from ${new Date(version.created_at).toLocaleString()}`,
+      });
+      setDocumentForm({
+        id: response.data.id,
+        title: response.data.title,
+        content: response.data.content,
+      });
+      const versionsResponse = await projectsApi.documentVersions(id, response.data.id);
+      setDocumentVersions(versionsResponse.data);
+      const history = await projectsApi.activity(id);
+      setActivity(getRows(history.data));
+    } catch (err) {
+      const detail = err.response?.data?.detail;
+      setDocumentError(typeof detail === 'string' ? detail : 'Failed to revert version.');
     } finally {
       setDocumentSaving(false);
     }
@@ -989,6 +1054,9 @@ export default function ProjectDetail() {
                 <div><span className={styles.sectionEyebrow}>Knowledge</span><h2>Project documents</h2></div>
                 {canManageDocuments && <button type="button" className={styles.primaryButton} onClick={createDocument}><Plus size={14} /> New document</button>}
               </div>
+              <div className={styles.documentSearch}>
+                <input type="search" value={documentSearch} onChange={(event) => setDocumentSearch(event.target.value)} placeholder="Search documents..." />
+              </div>
               {documentError && <p className={styles.inlineError} role="alert">{documentError}</p>}
               {documentEditorOpen ? (
                 <div className={styles.documentEditor}>
@@ -996,6 +1064,7 @@ export default function ProjectDetail() {
                     <div className={styles.documentEditorTitle}>
                       <input value={documentForm.title} onChange={(event) => setDocumentForm((form) => ({ ...form, title: event.target.value }))} placeholder="Document title" maxLength={255} disabled={!canManageDocuments} />
                       <div className={styles.documentEditorActions}>
+                        {documentForm.id && <button type="button" onClick={() => setShowVersions((prev) => !prev)} className={styles.secondaryButton}>{showVersions ? 'Hide versions' : 'View history'}</button>}
                         {canManageDocuments && <button type="button" onClick={() => setDocumentPreviewMode((prev) => !prev)} className={styles.secondaryButton}>{documentPreviewMode ? <Pencil size={14} /> : <Eye size={14} />}{documentPreviewMode ? 'Edit' : 'Preview'}</button>}
                         {canManageDocuments && documentForm.id && <button type="button" onClick={() => deleteDocument(documentForm.id)} className={styles.dangerButton}><Trash2 size={14} /> Delete</button>}
                         <button type="button" onClick={closeDocument} className={styles.secondaryButton}>Cancel</button>
@@ -1003,27 +1072,69 @@ export default function ProjectDetail() {
                       </div>
                     </div>
                   </div>
+                  {showVersions && documentVersions.length > 0 && (
+                    <div className={styles.versionHistory}>
+                      <h4>Version history</h4>
+                      <ul>
+                        {documentVersions.map((version) => (
+                          <li key={version.id}>
+                            <div>
+                              <strong>{new Date(version.created_at).toLocaleString()}</strong>
+                              <small>by {fullName(version.created_by)}</small>
+                            </div>
+                            {version.change_summary && <p>{version.change_summary}</p>}
+                            <button type="button" onClick={() => revertToVersion(version)} className={styles.secondaryButton}>Revert to this version</button>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                   {documentPreviewMode ? (
-                    <div className={styles.documentPreview}><ReactMarkdown remarkPlugins={[remarkGfm]}>{documentForm.content}</ReactMarkdown></div>
+                    <div className={styles.documentPreviewContainer}>
+                      {tableOfContents.length > 0 && (
+                        <aside className={styles.tableOfContents}>
+                          <h4><BookOpen size={14} /> Contents</h4>
+                          <ul>
+                            {tableOfContents.map((item, index) => (
+                              <li key={index} style={{ marginLeft: `${item.level * 12}px` }}>
+                                <a href={`#${item.id}`}>{item.text}</a>
+                              </li>
+                            ))}
+                          </ul>
+                        </aside>
+                      )}
+                      <div className={styles.documentPreview}><ReactMarkdown remarkPlugins={[remarkGfm]}>{documentForm.content}</ReactMarkdown></div>
+                    </div>
                   ) : (
-                    <textarea value={documentForm.content} onChange={(event) => setDocumentForm((form) => ({ ...form, content: event.target.value }))} placeholder="Write Markdown here..." disabled={!canManageDocuments} />
+                    <div className={styles.documentEditorWithToolbar}>
+                      <div className={styles.markdownToolbar}>
+                        <button type="button" onClick={() => insertMarkdown('**', '**')} title="Bold"><Bold size={14} /></button>
+                        <button type="button" onClick={() => insertMarkdown('*', '*')} title="Italic"><Italic size={14} /></button>
+                        <button type="button" onClick={() => insertMarkdown('`', '`')} title="Code"><Code size={14} /></button>
+                        <button type="button" onClick={() => insertMarkdown('[', '](url)')} title="Link"><Link size={14} /></button>
+                        <button type="button" onClick={() => insertMarkdown('\n- ')} title="List"><List size={14} /></button>
+                        <button type="button" onClick={() => insertMarkdown('\n## ')} title="Heading"><Search size={14} /></button>
+                      </div>
+                      <textarea value={documentForm.content} onChange={(event) => setDocumentForm((form) => ({ ...form, content: event.target.value }))} placeholder="Write Markdown here..." disabled={!canManageDocuments} />
+                    </div>
                   )}
                 </div>
-              ) : documents.length ? (
+              ) : documents.filter((doc) => !documentSearch || doc.title.toLowerCase().includes(documentSearch.toLowerCase())).length ? (
                 <ul className={styles.documentList}>
-                  {documents.map((document) => (
+                  {documents.filter((doc) => !documentSearch || doc.title.toLowerCase().includes(documentSearch.toLowerCase())).map((document) => (
                     <li key={document.id}>
                       <button type="button" onClick={() => openDocument(document)} className={styles.documentCard}>
                         <span className={styles.documentIcon}><FileText size={16} /></span>
                         <div className={styles.documentInfo}>
-                          <strong>{document.title}</strong>
+                          <strong>{document.title}{document.is_pinned && ' 📌'}</strong>
                           <small>Updated {new Date(document.updated_at).toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' })} by {fullName(document.updated_by)}</small>
                         </div>
+                        {canManageDocuments && <button type="button" onClick={(e) => { e.stopPropagation(); togglePin(document); }} className={styles.pinButton} title={document.is_pinned ? 'Unpin' : 'Pin'}>{document.is_pinned ? '📌' : '📌'}</button>}
                       </button>
                     </li>
                   ))}
                 </ul>
-              ) : <div className={styles.emptyTasks}><FileText size={20} /><strong>No documents yet</strong><span>Project specifications and RFCs will appear here.</span></div>}
+              ) : <div className={styles.emptyTasks}><FileText size={20} /><strong>{documents.length ? 'No matching documents' : 'No documents yet'}</strong><span>{documents.length ? 'Try a different search term.' : 'Project specifications and RFCs will appear here.'}</span></div>}
             </section>}
           </>
         ) : null}

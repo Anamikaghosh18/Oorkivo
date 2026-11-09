@@ -1676,6 +1676,26 @@
   }
 }
 /* ─── Documents ─────────────────────────────────────────────────────────────── */
+.documentSearch {
+  margin-bottom: 12px;
+}
+
+.documentSearch input {
+  width: 100%;
+  padding: 8px 11px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-base);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: var(--font-size-sm);
+}
+
+.documentSearch input:focus {
+  outline: 0;
+  border-color: var(--color-text-tertiary);
+}
+
 .documentList {
   display: grid;
   gap: 8px;
@@ -1719,6 +1739,7 @@
   display: grid;
   min-width: 0;
   gap: 2px;
+  flex: 1;
 }
 
 .documentInfo strong {
@@ -1729,6 +1750,21 @@
 .documentInfo small {
   font-size: var(--font-size-2xs);
   color: var(--color-text-tertiary);
+}
+
+.pinButton {
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  border: none;
+  background: transparent;
+  font-size: 16px;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity var(--transition-fast);
+}
+
+.pinButton:hover {
+  opacity: 1;
 }
 
 .documentEditor {
@@ -1775,6 +1811,62 @@
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.versionHistory {
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-base);
+  background: var(--color-surface-raised);
+}
+
+.versionHistory h4 {
+  margin: 0 0 8px;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.versionHistory ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.versionHistory li {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.versionHistory li:last-child {
+  border-bottom: 0;
+}
+
+.versionHistory div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.versionHistory strong {
+  font-size: var(--font-size-xs);
+}
+
+.versionHistory small {
+  font-size: var(--font-size-2xs);
+  color: var(--color-text-tertiary);
+}
+
+.versionHistory p {
+  margin: 4px 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.versionHistory button {
+  margin-top: 4px;
+  padding: 4px 8px;
+  font-size: var(--font-size-2xs);
 }
 
 .documentEditor textarea {
@@ -1860,4 +1952,97 @@
 
 .documentPreview a:hover {
   color: var(--color-action-hover);
+}
+
+.markdownToolbar {
+  display: flex;
+  gap: 4px;
+  padding: 8px;
+  border: 1px solid var(--color-border);
+  border-bottom: none;
+  border-radius: var(--radius-base) var(--radius-base) 0 0;
+  background: var(--color-surface-raised);
+}
+
+.markdownToolbar button {
+  padding: 6px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.markdownToolbar button:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text-primary);
+}
+
+.documentEditorWithToolbar {
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+
+.documentEditorWithToolbar textarea {
+  border-radius: 0 0 var(--radius-base) var(--radius-base);
+}
+
+.documentPreviewContainer {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 16px;
+}
+
+.tableOfContents {
+  position: sticky;
+  top: 0;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-base);
+  background: var(--color-surface-raised);
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.tableOfContents h4 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 8px;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+}
+
+.tableOfContents ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tableOfContents li {
+  margin-bottom: 4px;
+}
+
+.tableOfContents a {
+  display: block;
+  padding: 2px 4px;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-2xs);
+  text-decoration: none;
+  border-radius: 3px;
+}
+
+.tableOfContents a:hover {
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+}
+
+@media (max-width: 768px) {
+  .documentPreviewContainer {
+    grid-template-columns: 1fr;
+  }
+  .tableOfContents {
+    display: none;
+  }
 }
