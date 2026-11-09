@@ -25,17 +25,17 @@
   --text-secondary:         var(--color-text-secondary);
 
   /* Brand / Action Accents */
-  --color-sage-dark:        var(--color-text-primary);
-  --color-sage:             var(--color-text-secondary);
-  --color-sage-mid:         var(--color-text-secondary);
-  --color-sage-light:       #f1f5f9;
-  --color-sage-hover:       #e2e8f0;
-  --color-moss:             var(--color-text-primary);
-  --moss:                   var(--color-moss);
-  --color-action-bg:        #0f172a;
-  --color-action-hover:     #1e293b;
-  --color-action-border:    #0f172a;
-  --color-action-text:      #ffffff;
+  --color-brand-dark:        var(--color-text-primary);
+  --color-brand:             var(--color-text-secondary);
+  --color-brand-mid:         var(--color-text-secondary);
+  --color-brand-light:       #d1d5db; /* Neutral light gray */
+  --color-brand-hover:       #c4c9d2;
+  --color-accent:            var(--color-text-primary);
+  --accent:                 var(--color-accent);
+  --color-action-bg:        #18181b; /* Charcoal action */
+  --color-action-hover:     #27272a;
+  --color-action-border:    #3f3f46;
+  --color-action-text:      #fafafa;
 
   /* Sidebar (Stark Charcoal Sidebar for professional product definition) */
   --color-sidebar-bg:       #0e1116;
@@ -67,8 +67,8 @@
   --color-rose-bg:          #fff1f2;
   --color-amber:            #d97706;
   --color-amber-bg:         #fffbeb;
-  --color-slate:            #475569;
-  --color-slate-bg:         #f1f5f9;
+  --color-slate:            #94a3b8;
+  --color-slate-bg:         #d1d5db;
   --color-plum:             #7c3aed;
   --color-plum-bg:          #f5f3ff;
 
@@ -152,15 +152,15 @@
 [data-theme="dark"] {
   color-scheme: dark;
 
-  /* Backgrounds: Matte Obsidian Charcoal */
-  --color-bg:               #0b0c0e; /* Deep Charcoal Canvas */
-  --page-bg:                #0b0c0e;
-  --color-surface:          #131519; /* Subtle elevated surface card */
-  --surface:                #131519;
-  --color-surface-raised:   #1a1d24; /* Distinct raised wells */
-  --color-surface-hover:    #242933; /* Noticeable hover tone */
-  --color-border:           #2c3240; /* Crisp Dark Charcoal Border */
-  --color-border-subtle:    #222733;
+  /* Backgrounds: Single Charcoal — separation comes from borders, not fills */
+  --color-bg:               #14171c; /* The one Charcoal Canvas */
+  --page-bg:                #14171c;
+  --color-surface:          #14171c; /* Same charcoal for every surface */
+  --surface:                #14171c;
+  --color-surface-raised:   #14171c; /* No raised fill — lines do the separating */
+  --color-surface-hover:    #14171c;
+  --color-border:           #2e3442; /* Crisp separator lines */
+  --color-border-subtle:    #232833;
   --border:                 var(--color-border);
   --border-subtle:          var(--color-border-subtle);
 
@@ -175,17 +175,17 @@
   --text-secondary:         var(--color-text-secondary);
 
   /* Brand / Action Accents */
-  --color-sage-dark:        #f8fafc;
-  --color-sage:             #cbd5e1;
-  --color-sage-mid:         #94a3b8;
-  --color-sage-light:       #1a1d24;
-  --color-sage-hover:       #242933;
-  --color-moss:             #f8fafc;
-  --moss:                   var(--color-moss);
-  --color-action-bg:        #f8fafc;
-  --color-action-hover:     #ffffff;
-  --color-action-border:    #f8fafc;
-  --color-action-text:      #0f172a;
+  --color-brand-dark:        #f8fafc;
+  --color-brand:             #cbd5e1;
+  --color-brand-mid:         #94a3b8;
+  --color-brand-light:       #d1d5db;
+  --color-brand-hover:       #c4c9d2;
+  --color-accent:            #f8fafc;
+  --accent:                 var(--color-accent);
+  --color-action-bg:        #3f3f46; /* Charcoal action */
+  --color-action-hover:     #52525b;
+  --color-action-border:    #52525b;
+  --color-action-text:      #fafafa;
 
   /* Sidebar (Deepest Obsidian) */
   --color-sidebar-bg:       #08090b;
@@ -310,9 +310,8 @@ input, textarea, select { font-family: inherit; }
 .btn-primary:hover {
   background: var(--color-action-hover);
   border-color: var(--color-action-border);
-  opacity: 0.92;
+  transform: translateY(-1px);
   box-shadow: var(--shadow-sm);
-  transform: translateY(-0.5px);
 }
 
 .btn-secondary {
@@ -322,7 +321,8 @@ input, textarea, select { font-family: inherit; }
 }
 .btn-secondary:hover {
   background: var(--color-surface-raised);
-  border-color: var(--color-border-subtle);
+  border-color: var(--color-text-tertiary);
+  color: var(--color-text-primary);
 }
 
 .btn-ghost {
@@ -332,6 +332,7 @@ input, textarea, select { font-family: inherit; }
 .btn-ghost:hover {
   background: var(--color-surface-raised);
   color: var(--color-text-primary);
+  border-color: var(--color-border-subtle);
 }
 
 .btn-danger {
@@ -340,7 +341,9 @@ input, textarea, select { font-family: inherit; }
   border-color: var(--color-danger-border, var(--color-danger));
 }
 .btn-danger:hover {
-  opacity: 0.88;
+  border-color: var(--color-danger);
+  background: var(--color-danger-bg);
+  opacity: 0.95;
 }
 
 /* Status Pills */
