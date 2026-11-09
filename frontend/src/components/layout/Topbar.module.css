@@ -1,6 +1,6 @@
-.topbar {
+﻿.topbar {
   height: var(--topbar-height);
-  background: var(--color-bg);
+  background: var(--color-surface);
   border-bottom: 1px solid var(--color-border-subtle);
   display: flex;
   align-items: center;
@@ -50,7 +50,7 @@
   transition: background var(--transition-fast);
   min-width: 0;
 }
-.orgSwitcher:hover { background: var(--color-bg); }
+.orgSwitcher:hover { background: var(--color-surface); }
 .orgMenuWrap { position: relative; min-width: 0; }
 .organizationMenu {
   position: absolute;
@@ -78,7 +78,7 @@
   color: var(--color-text-primary);
   text-align: left;
 }
-.organizationMenu button:hover:not(:disabled) { background: var(--color-bg); }
+.organizationMenu button:hover:not(:disabled) { background: var(--color-surface); }
 .organizationMenu button:disabled { cursor: default; background: var(--color-sage-light); }
 .organizationMenu button span { font-size: var(--font-size-sm); font-weight: 600; }
 .organizationMenu button small,
@@ -129,7 +129,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  background: var(--color-bg);
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-base);
   padding: 0 var(--space-3);
@@ -190,7 +190,7 @@
   transition: background var(--transition-fast), color var(--transition-fast);
 }
 .iconBtn:hover {
-  background: var(--color-bg);
+  background: var(--color-surface);
   color: var(--color-text-primary);
 }
 
@@ -259,7 +259,7 @@
   text-align: left;
 }
 
-.notificationItem:hover { background: var(--color-bg); }
+.notificationItem:hover { background: var(--color-surface); }
 .notificationUnread { background: var(--color-slate-bg); }
 .notificationCopy { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 4px; }
 .notificationCopy strong { color: var(--color-text-primary); font-size: 12px; font-weight: 650; }
@@ -288,7 +288,7 @@
 }
 
 .userMenu a:hover,
-.userMenu button:hover { background: var(--color-bg); }
+.userMenu button:hover { background: var(--color-surface); }
 
 /* ── User button ────────────────────────────────────────────── */
 .userBtn {
@@ -302,7 +302,7 @@
   margin-left: var(--space-1);
 }
 .userBtn:hover {
-  background: var(--color-bg);
+  background: var(--color-surface);
   border-color: var(--color-border);
 }
 

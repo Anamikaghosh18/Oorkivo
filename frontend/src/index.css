@@ -1,14 +1,14 @@
-/* ─── Oorkivo Modern Charcoal Design Tokens ───────────────────────── */
+﻿/* ─── Oorkivo Modern Charcoal Design Tokens ───────────────────────── */
 @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;1,14..32,400&display=swap');
 
 :root {
   /* ── Light Mode (Clean Slate / Crisp Charcoal) ── */
-  --color-bg:               #ffffff;
-  --page-bg:                #ffffff;
+  --color-bg:               #f8fafc; /* Soft Slate Canvas */
+  --page-bg:                #f8fafc;
   --color-surface:          #ffffff;
   --surface:                #ffffff;
-  --color-surface-raised:   #ffffff;
-  --color-surface-hover:    #ffffff;
+  --color-surface-raised:   #f1f5f9; /* Elevated Well / Header */
+  --color-surface-hover:    #e2e8f0; /* Clear Tactile Hover */
   --color-border:           #e2e8f0; /* Subtle Hairline Border */
   --color-border-subtle:    #edf2f7;
   --border:                 var(--color-border);
@@ -28,13 +28,13 @@
   --color-sage-dark:        var(--color-text-primary);
   --color-sage:             var(--color-text-secondary);
   --color-sage-mid:         var(--color-text-secondary);
-  --color-sage-light:       var(--color-surface-raised);
-  --color-sage-hover:       var(--color-surface-hover);
+  --color-sage-light:       #f1f5f9;
+  --color-sage-hover:       #e2e8f0;
   --color-moss:             var(--color-text-primary);
   --moss:                   var(--color-moss);
-  --color-action-bg:        #000000;
-  --color-action-hover:     #262626;
-  --color-action-border:    #000000;
+  --color-action-bg:        #0f172a;
+  --color-action-hover:     #1e293b;
+  --color-action-border:    #0f172a;
   --color-action-text:      #ffffff;
 
   /* Sidebar (Stark Charcoal Sidebar for professional product definition) */
@@ -155,12 +155,12 @@
   /* Backgrounds: Matte Obsidian Charcoal */
   --color-bg:               #0b0c0e; /* Deep Charcoal Canvas */
   --page-bg:                #0b0c0e;
-  --color-surface:          #0b0c0e;
-  --surface:                #0b0c0e;
-  --color-surface-raised:   #0b0c0e;
-  --color-surface-hover:    #0b0c0e;
-  --color-border:           #22262e; /* Crisp Dark Charcoal Border */
-  --color-border-subtle:    #1a1d23;
+  --color-surface:          #131519; /* Subtle elevated surface card */
+  --surface:                #131519;
+  --color-surface-raised:   #1a1d24; /* Distinct raised wells */
+  --color-surface-hover:    #242933; /* Noticeable hover tone */
+  --color-border:           #242832; /* Crisp Dark Charcoal Border */
+  --color-border-subtle:    #1a1d24;
   --border:                 var(--color-border);
   --border-subtle:          var(--color-border-subtle);
 
@@ -175,17 +175,17 @@
   --text-secondary:         var(--color-text-secondary);
 
   /* Brand / Action Accents */
-  --color-sage-dark:        var(--color-text-primary);
-  --color-sage:             var(--color-text-secondary);
-  --color-sage-mid:         var(--color-text-tertiary);
-  --color-sage-light:       var(--color-surface);
-  --color-sage-hover:       var(--color-surface-hover);
-  --color-moss:             var(--color-text-primary);
+  --color-sage-dark:        #f8fafc;
+  --color-sage:             #cbd5e1;
+  --color-sage-mid:         #94a3b8;
+  --color-sage-light:       #1a1d24;
+  --color-sage-hover:       #242933;
+  --color-moss:             #f8fafc;
   --moss:                   var(--color-moss);
-  --color-action-bg:        #000000;
-  --color-action-hover:     #25282d;
-  --color-action-border:    #50545d;
-  --color-action-text:      #ffffff;
+  --color-action-bg:        #f8fafc;
+  --color-action-hover:     #ffffff;
+  --color-action-border:    #f8fafc;
+  --color-action-text:      #0f172a;
 
   /* Sidebar (Deepest Obsidian) */
   --color-sidebar-bg:       #08090b;

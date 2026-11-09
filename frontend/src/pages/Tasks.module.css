@@ -121,6 +121,7 @@
   color: var(--color-text-secondary);
   font: inherit;
   cursor: pointer;
+  transition: all var(--transition-fast);
 }
 
 .viewToggle button {
@@ -216,6 +217,7 @@
   font: inherit;
   font-size: var(--font-size-xs);
   cursor: pointer;
+  transition: all var(--transition-fast);
 }
 
 .savedViewItem button + button {
@@ -259,6 +261,7 @@
   font: inherit;
   font-size: var(--font-size-xs);
   cursor: pointer;
+  transition: all var(--transition-fast);
 }
 
 .saveViewForm > button:disabled { opacity: .5; cursor: not-allowed; }
@@ -680,6 +683,7 @@ a.row:hover {
   font-size: var(--font-size-sm);
   font-weight: 600;
   cursor: pointer;
+  transition: all var(--transition-fast);
 }
 
 .newTaskButton:hover,
@@ -712,6 +716,7 @@ a.row:hover {
   font: inherit;
   font-size: var(--font-size-sm);
   cursor: pointer;
+  transition: all var(--transition-fast);
 }
 
 .workspaceTabs button:hover,
@@ -782,6 +787,7 @@ a.row:hover {
   font: inherit;
   font-size: var(--font-size-sm);
   cursor: pointer;
+  transition: all var(--transition-fast);
 }
 
 .myWorkFilters button:hover,
@@ -1018,6 +1024,7 @@ a.row:hover {
   font: inherit;
   font-size: var(--font-size-xs);
   cursor: pointer;
+  transition: all var(--transition-fast);
 }
 
 .viewToggle .viewActive { background: var(--color-sage-light); color: var(--color-sage-dark); }
@@ -1167,6 +1174,7 @@ a.row:hover {
   text-align: left;
   white-space: nowrap;
   cursor: pointer;
+  transition: all var(--transition-fast);
 }
 .taskActions > div button:hover { background: var(--color-bg); }
 .taskActions > div .archiveTaskAction { color: var(--color-danger); }
