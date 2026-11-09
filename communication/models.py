@@ -94,6 +94,9 @@ class Activity(models.Model):
         SPRINT_STARTED = 'SPRINT_STARTED', 'Sprint Started'
         SPRINT_COMPLETED = 'SPRINT_COMPLETED', 'Sprint Completed'
         TASK_MOVED_TO_SPRINT = 'TASK_MOVED_TO_SPRINT', 'Task Moved to Sprint'
+        DOCUMENT_CREATED = 'DOCUMENT_CREATED', 'Document Created'
+        DOCUMENT_UPDATED = 'DOCUMENT_UPDATED', 'Document Updated'
+        DOCUMENT_DELETED = 'DOCUMENT_DELETED', 'Document Deleted'
 
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='activities')
     task = models.ForeignKey(Task, on_delete=models.CASCADE, null=True, blank=True, related_name='activities')
