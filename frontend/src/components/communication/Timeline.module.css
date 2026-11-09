@@ -1,4 +1,4 @@
-.timeline {
+﻿.timeline {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
@@ -458,3 +458,19 @@
 
 .sendBtn:hover:not(:disabled) { background: var(--color-action-hover, #262626); }
 .sendBtn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+@media (max-width: 640px) {
+  .header {
+    padding: var(--space-3) var(--space-4);
+  }
+  .feed {
+    padding: var(--space-3);
+  }
+  .composer {
+    padding: 8px;
+  }
+  .composerActions {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+}

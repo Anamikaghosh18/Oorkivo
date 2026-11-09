@@ -6,6 +6,7 @@ import styles from './AppShell.module.css';
 
 export default function AppShell({ children, org, user }) {
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -35,8 +36,18 @@ export default function AppShell({ children, org, user }) {
 
   return (
     <div className={`${styles.shell} ${collapsed ? styles.shellCollapsed : ''}`}>
-      <Sidebar collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} />
-      <Topbar org={org} user={user} collapsed={collapsed} />
+      <Sidebar
+        collapsed={collapsed}
+        onToggle={() => setCollapsed((c) => !c)}
+        mobileOpen={mobileOpen}
+        onCloseMobile={() => setMobileOpen(false)}
+      />
+      <Topbar
+        org={org}
+        user={user}
+        collapsed={collapsed}
+        onToggleMobileMenu={() => setMobileOpen((o) => !o)}
+      />
       <main className={styles.main}>
         {children}
       </main>

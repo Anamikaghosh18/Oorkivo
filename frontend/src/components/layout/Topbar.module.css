@@ -15,7 +15,30 @@
   box-shadow: 0 1px 3px rgba(41, 44, 39, 0.035);
 }
 
-/* Collapsed state handled by AppShell CSS var */
+.leftSection {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.mobileMenuBtn {
+  display: none;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-base);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.mobileMenuBtn:hover {
+  background: var(--color-surface-hover);
+}
 
 /* ── Org Switcher ───────────────────────────────────────────── */
 .orgSwitcher {
@@ -25,9 +48,10 @@
   padding: 5px var(--space-2);
   border-radius: var(--radius-base);
   transition: background var(--transition-fast);
+  min-width: 0;
 }
 .orgSwitcher:hover { background: var(--color-bg); }
-.orgMenuWrap { position: relative; }
+.orgMenuWrap { position: relative; min-width: 0; }
 .organizationMenu {
   position: absolute;
   z-index: 120;
@@ -75,14 +99,14 @@
   flex-shrink: 0;
 }
 
-.orgInfo { display: flex; flex-direction: column; align-items: flex-start; }
+.orgInfo { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; }
 
 .orgName {
   font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--color-text-primary);
   white-space: nowrap;
-  max-width: 200px;
+  max-width: 180px;
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -311,3 +335,68 @@
 
 /* Collapsed sidebar adjustment */
 .topbar[data-collapsed="true"] { left: var(--sidebar-collapsed); }
+
+/* ── Responsive Breakpoints ──────────────────────────────────── */
+@media (max-width: 768px) {
+  .topbar {
+    left: 0 !important;
+    padding: 0 var(--space-3);
+  }
+
+  .mobileMenuBtn {
+    display: flex;
+  }
+
+  .orgName {
+    max-width: 110px;
+  }
+
+  .searchWrap {
+    width: 34px;
+    padding: 0;
+    justify-content: center;
+    border: none;
+    background: transparent;
+  }
+
+  .searchWrap input,
+  .searchWrap kbd {
+    display: none;
+  }
+
+  .searchWrap.searchFocused {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    right: 12px;
+    left: 12px;
+    width: auto;
+    z-index: 100;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    padding: 0 12px;
+    box-shadow: var(--shadow-md);
+  }
+
+  .searchWrap.searchFocused input {
+    display: block;
+  }
+
+  .userName {
+    display: none;
+  }
+
+  .divider {
+    margin: 0 var(--space-1);
+  }
+}
+
+@media (max-width: 480px) {
+  .orgSwitcher {
+    padding: 4px 2px;
+  }
+  .orgName {
+    max-width: 90px;
+    font-size: var(--font-size-xs);
+  }
+}

@@ -9,7 +9,7 @@
   top: 0;
   z-index: 100;
   border-right: 1px solid var(--color-sidebar-border);
-  transition: width var(--transition-base);
+  transition: width var(--transition-base), transform var(--transition-base);
   overflow: visible;
   box-shadow: 2px 0 12px rgba(0, 0, 0, 0.1);
 }
@@ -53,6 +53,10 @@
   letter-spacing: 0.02em;
   color: var(--color-sidebar-text);
   white-space: nowrap;
+}
+
+.mobileCloseBtn {
+  display: none;
 }
 
 /* ── Navigation ─────────────────────────────────────────────── */
@@ -175,3 +179,58 @@
 
 .toggleIcon { transition: transform var(--transition-base); }
 .toggleIconFlipped { transform: rotate(180deg); }
+
+/* ── Mobile Responsive Overlay ──────────────────────────────── */
+.backdrop {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(2px);
+    z-index: 998;
+    animation: sidebarBackdropFade 180ms ease;
+  }
+
+  .sidebar {
+    transform: translateX(-100%);
+    width: 260px !important;
+    z-index: 999;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.35);
+  }
+
+  .sidebar.mobileOpen {
+    transform: translateX(0);
+  }
+
+  .toggleBtn {
+    display: none;
+  }
+
+  .mobileCloseBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: auto;
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    border: none;
+    color: var(--color-sidebar-muted);
+    cursor: pointer;
+  }
+
+  .mobileCloseBtn:hover {
+    color: var(--color-sidebar-text);
+  }
+}
+
+@keyframes sidebarBackdropFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}

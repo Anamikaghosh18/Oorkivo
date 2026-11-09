@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Search, Bell, ChevronDown, CheckCheck, LogOut } from 'lucide-react';
+import { Search, Bell, ChevronDown, CheckCheck, LogOut, Menu } from 'lucide-react';
 import Avatar from '../Avatar';
 import { communicationApi } from '../../services/api';
 import { activateOrganization } from '../../utils/organizationContext';
@@ -17,7 +17,7 @@ function formatTime(value) {
   return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(date);
 }
 
-export default function Topbar({ org, user, collapsed = false }) {
+export default function Topbar({ org, user, collapsed = false, onToggleMobileMenu }) {
   const [searchFocused, setSearchFocused] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
@@ -81,40 +81,54 @@ export default function Topbar({ org, user, collapsed = false }) {
 
   return (
     <header className={styles.topbar} data-collapsed={collapsed ? 'true' : 'false'}>
-      {/* Current organization */}
-      <div className={styles.orgMenuWrap}>
-        <button
-          type="button"
-          className={styles.orgSwitcher}
-          aria-label="Current organization"
-          aria-expanded={organizationMenuOpen}
-          onClick={() => {
-            setOrganizationMenuOpen((open) => !open);
-            setNotificationsOpen(false);
-            setUserMenuOpen(false);
-          }}
-        >
-          <div className={styles.orgIcon}><span>{org?.name?.[0] ?? 'O'}</span></div>
-          <div className={styles.orgInfo}><span className={styles.orgName}>{org?.name ?? 'Select Organization'}</span></div>
-          <ChevronDown size={13} className={styles.orgChevron} />
-        </button>
-        {organizationMenuOpen && (
-          <div className={styles.organizationMenu} role="menu" aria-label="Switch organization">
-            {(user?.organization_memberships ?? []).filter((item) => item.status === 'ACTIVE').map((membership) => (
-              <button
-                type="button"
-                role="menuitem"
-                key={membership.organization_id}
-                disabled={String(membership.organization_id) === String(org?.id)}
-                onClick={() => activateOrganization(membership.organization_id)}
-              >
-                <span>{membership.organization}</span>
-                <small>{membership.access_level} · {membership.organization_plan}</small>
-              </button>
-            ))}
-            {!user?.organization_memberships?.length && <span className={styles.noOrganizations}>No workspace membership</span>}
-          </div>
+      {/* Mobile Hamburger Menu Toggle */}
+      <div className={styles.leftSection}>
+        {onToggleMobileMenu && (
+          <button
+            type="button"
+            className={styles.mobileMenuBtn}
+            onClick={onToggleMobileMenu}
+            aria-label="Toggle navigation menu"
+          >
+            <Menu size={18} />
+          </button>
         )}
+
+        {/* Current organization */}
+        <div className={styles.orgMenuWrap}>
+          <button
+            type="button"
+            className={styles.orgSwitcher}
+            aria-label="Current organization"
+            aria-expanded={organizationMenuOpen}
+            onClick={() => {
+              setOrganizationMenuOpen((open) => !open);
+              setNotificationsOpen(false);
+              setUserMenuOpen(false);
+            }}
+          >
+            <div className={styles.orgIcon}><span>{org?.name?.[0] ?? 'O'}</span></div>
+            <div className={styles.orgInfo}><span className={styles.orgName}>{org?.name ?? 'Select Organization'}</span></div>
+            <ChevronDown size={13} className={styles.orgChevron} />
+          </button>
+          {organizationMenuOpen && (
+            <div className={styles.organizationMenu} role="menu" aria-label="Switch organization">
+              {(user?.organization_memberships ?? []).filter((item) => item.status === 'ACTIVE').map((membership) => (
+                <button
+                  type="button"
+                  role="menuitem"
+                  key={membership.organization_id}
+                  disabled={String(membership.organization_id) === String(org?.id)}
+                  onClick={() => activateOrganization(membership.organization_id)}
+                >
+                  <span>{membership.organization}</span>
+                  <small>{membership.access_level} · {membership.organization_plan}</small>
+                </button>
+              ))}
+              {!user?.organization_memberships?.length && <span className={styles.noOrganizations}>No workspace membership</span>}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Right controls */}
@@ -147,7 +161,7 @@ export default function Topbar({ org, user, collapsed = false }) {
             <section className={styles.notificationPanel} aria-label="Notifications">
               <div className={styles.panelHeading}>
                 <strong>Notifications</strong>
-                <button type="button" onClick={markAllRead} disabled={!unreadCount}><CheckCheck size={14} /> Mark all as read</button>
+                <button type="button" onClick={markAllRead} disabled={!unreadCount}><CheckCheck size={14} /> Mark all</button>
               </div>
               {notificationError && <p className={styles.notificationError} role="alert">{notificationError}</p>}
               {notificationsLoading ? <p className={styles.notificationState}>Loading notifications…</p>

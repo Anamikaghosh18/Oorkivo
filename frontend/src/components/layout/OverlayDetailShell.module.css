@@ -1,4 +1,4 @@
-.overlay {
+﻿.overlay {
   position: fixed;
   z-index: 500;
   inset: 0;
@@ -7,7 +7,7 @@
   justify-content: center;
   overflow: auto;
   padding: clamp(16px, 4vh, 40px);
-  background: rgb(41 44 39 / 30%);
+  background: rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(7px);
   -webkit-backdrop-filter: blur(7px);
 }
@@ -123,4 +123,11 @@
   }
   .centerTitle { display: none; }
   .closeBtn { min-height: 34px; padding: 0 8px; }
+}
+
+@media (max-width: 640px) {
+  .dialog {
+    width: 100% !important;
+    border-left: none !important;
+  }
 }

@@ -1,4 +1,4 @@
-.detailScroller {
+﻿.detailScroller {
   min-height: 0;
   flex: 1;
   overflow-y: auto;
@@ -157,7 +157,7 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #999b91;
+  background: var(--color-text-tertiary);
 }
 
 .priorityHIGH { color: var(--color-priority-high); }
@@ -326,7 +326,7 @@
   display: grid;
   place-items: center;
   padding: 18px;
-  background: rgb(25 28 25 / 42%);
+  background: rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(2px);
 }
 
@@ -592,7 +592,7 @@
 }
 
 .milestoneList { padding-top: 5px; }
-.milestoneList > li { border-bottom: 1px solid rgb(217 213 204 / 58%); }
+.milestoneList > li { border-bottom: 1px solid var(--color-border-subtle); }
 
 .milestoneButton {
   display: grid;
@@ -964,7 +964,7 @@
   display: flex;
   gap: 9px;
   padding: 12px 2px;
-  border-bottom: 1px solid rgb(217 213 204 / 58%);
+  border-bottom: 1px solid var(--color-border-subtle);
 }
 
 .discussionContent {
@@ -1042,14 +1042,14 @@
   align-items: center;
   gap: 9px;
   padding: 8px 3px;
-  border-bottom: 1px solid rgb(217 213 204 / 58%);
+  border-bottom: 1px solid var(--color-border-subtle);
   color: inherit;
   text-decoration: none;
   transition: background .15s ease;
 }
 
 .taskRow:hover {
-  background: rgb(255 253 248 / 72%);
+  background: var(--color-surface-hover);
 }
 
 .taskStatusIcon {
@@ -1177,7 +1177,7 @@
   min-height: 56px;
   align-items: center;
   gap: 9px;
-  border-bottom: 1px solid rgb(217 213 204 / 58%);
+  border-bottom: 1px solid var(--color-border-subtle);
 }
 
 .memberInfo {
@@ -1605,4 +1605,73 @@
   .taskRow { grid-template-columns: 20px minmax(90px, 1fr) auto; gap: 7px; }
   .taskStatus, .priority { display: none; }
   .dueDate { max-width: 76px; }
+}
+
+/* â”€â”€ Mobile Responsive Enhancements â”€â”€ */
+@media (max-width: 768px) {
+  .page {
+    padding: var(--space-4) var(--space-3) var(--space-8);
+  }
+  .projectHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-3);
+    padding: var(--space-4) var(--space-3);
+  }
+  .projectTabs {
+    margin: var(--space-3) 0 var(--space-4);
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .projectTabs::-webkit-scrollbar { display: none; }
+  .projectFacts {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px;
+  }
+  .factItem {
+    padding: 10px !important;
+  }
+  .roadmapGrid,
+  .contentGrid {
+    grid-template-columns: 1fr !important;
+    gap: 20px !important;
+  }
+  .membersSection {
+    padding-left: 0 !important;
+    border-left: none !important;
+    border-top: 1px solid var(--color-border-subtle);
+    padding-top: 16px;
+  }
+  .taskRow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 10px;
+    padding: 10px 4px;
+  }
+  .taskTitleBlock {
+    width: calc(100% - 32px);
+  }
+  .dueDate {
+    margin-left: auto;
+  }
+  .sprintModal {
+    width: 100% !important;
+    max-height: 94dvh;
+    padding: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .projectFacts {
+    grid-template-columns: 1fr !important;
+  }
+  .milestoneButton {
+    grid-template-columns: 1fr auto !important;
+    gap: 6px;
+  }
+  .milestoneProgress,
+  .milestonePercent {
+    grid-column: 1 / -1;
+  }
 }

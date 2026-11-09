@@ -1,4 +1,4 @@
-.page {
+﻿.page {
   max-width: 1200px;
   margin: 0 auto;
 }
@@ -547,4 +547,32 @@
 .projectRow:hover {
   padding-inline: var(--space-4);
   background: var(--color-surface-raised);
+}
+
+@media (max-width: 768px) {
+  .overviewMetrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    row-gap: 14px;
+  }
+  .overviewMetric:nth-child(even) {
+    border-left: 1px solid var(--color-border-subtle);
+  }
+  .overviewMetric:nth-child(odd) {
+    border-left: none;
+    padding-left: 0;
+  }
+}
+@media (max-width: 480px) {
+  .overviewMetrics {
+    grid-template-columns: 1fr !important;
+  }
+  .overviewMetric {
+    border-left: none !important;
+    padding-left: 0 !important;
+    border-bottom: 1px solid var(--color-border-subtle);
+    padding-bottom: 8px;
+  }
+  .overviewMetric:last-child {
+    border-bottom: none;
+  }
 }

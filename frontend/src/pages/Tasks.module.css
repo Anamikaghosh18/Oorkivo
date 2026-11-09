@@ -1,4 +1,4 @@
-.page {
+﻿.page {
   max-width: 1180px;
   margin: 0 auto;
 }
@@ -1261,9 +1261,10 @@ a.row:hover {
   .mobileFiltersButton { display: inline-flex; min-height: 38px; align-items: center; gap: 6px; padding: 0 10px; border: 1px solid var(--color-border); border-radius: var(--radius-base); background: var(--color-surface); color: var(--color-text-secondary); font: inherit; font-size: var(--font-size-xs); cursor: pointer; }
   .viewToggle { margin-left: auto; }
   .listHeader { display: none; }
-  .listRow { grid-template-columns: minmax(0, 1fr) auto; gap: 8px 12px; }
-  .listTask { grid-column: 1 / -1; }
-  .listDue { justify-self: end; }
+  .listRow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 12px 10px; }
+  .listTask { width: 100%; }
+  .listRow .quickStatus { font-size: 11px; height: 28px; max-width: 140px; }
+  .listDue { margin-left: auto; font-size: 11px; }
   .backlogRow { grid-template-columns: minmax(0, 1fr) auto; gap: 6px 10px; padding: 11px 4px; }
   .backlogTaskTitle { grid-column: 1 / -1; }
   .backlogRow .sprintMove { grid-column: 1 / -1; width: fit-content; }
@@ -1282,7 +1283,7 @@ a.row:hover {
   .workTaskMeta { justify-content: flex-start; }
   .quietCompleted { display: none; }
   .formRow { flex-direction: column; }
-  .taskDrawer { padding: 18px; }
+  .taskDrawer { width: 100% !important; padding: 18px 14px; border-left: none; }
   .sprintProgressSummary { align-items: flex-start; flex-direction: column; }
   .sprintProgressSummary .sprintProgressTrack { width: 100%; }
 }

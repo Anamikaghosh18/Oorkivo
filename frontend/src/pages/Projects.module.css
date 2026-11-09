@@ -1,4 +1,4 @@
-.page {
+﻿.page {
   max-width: 1180px;
   margin: 0 auto;
   padding: 0 0 40px;
@@ -832,4 +832,34 @@
   .pageHeader { padding: var(--space-4); }
   .createForm { padding: var(--space-4); }
   .projectRow { padding: var(--space-4); }
+}
+
+@media (max-width: 768px) {
+  .pageHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .createForm {
+    grid-template-columns: 1fr !important;
+    gap: 12px;
+  }
+  .createSubmit {
+    align-self: flex-start;
+  }
+  .projectRow {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .projectLink {
+    width: 100%;
+  }
+  .projectTopline {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .projectDrawer {
+    width: 100% !important;
+  }
 }

@@ -13,6 +13,8 @@ import {
   ArrowRight,
   Maximize2,
   Users,
+  List,
+  BarChart3,
 } from 'lucide-react';
 import Avatar from '../Avatar';
 import styles from './TimelineGanttView.module.css';
@@ -63,6 +65,7 @@ export default function TimelineGanttView({
   const [selectedTaskId, setSelectedTaskId] = useState(null);
   const [collapsedGroups, setCollapsedGroups] = useState({});
   const [showUnscheduled, setShowUnscheduled] = useState(false);
+  const [mobilePanel, setMobilePanel] = useState('chart'); // 'chart' | 'tasks'
 
   const canvasRef = useRef(null);
   const sidebarBodyRef = useRef(null);
@@ -508,6 +511,25 @@ export default function TimelineGanttView({
         </div>
 
         <div className={styles.toolbarRight}>
+          <div className={styles.mobileViewToggle}>
+            <button
+              type="button"
+              className={`${styles.mobileViewBtn} ${mobilePanel === 'chart' ? styles.mobileViewBtnActive : ''}`}
+              onClick={() => setMobilePanel('chart')}
+              title="Show Gantt Chart"
+            >
+              <BarChart3 size={13} /> Chart
+            </button>
+            <button
+              type="button"
+              className={`${styles.mobileViewBtn} ${mobilePanel === 'tasks' ? styles.mobileViewBtnActive : ''}`}
+              onClick={() => setMobilePanel('tasks')}
+              title="Show Task Table"
+            >
+              <List size={13} /> Tasks
+            </button>
+          </div>
+
           {conflictsCount > 0 && (
             <span className={styles.conflictBadge} title="Tasks scheduled before dependencies finish">
               <AlertTriangle size={13} />
@@ -575,7 +597,7 @@ export default function TimelineGanttView({
       </div>
 
       {/* ─── Main View Split: Sidebar + Gantt Canvas ─────────────── */}
-      <div className={styles.mainSplit}>
+      <div className={styles.mainSplit} data-mobile-panel={mobilePanel}>
         {/* Left Sidebar Table */}
         <aside className={styles.sidebarPane}>
           <div className={styles.sidebarHeader}>
