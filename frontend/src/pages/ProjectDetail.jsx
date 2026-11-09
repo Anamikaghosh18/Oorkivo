@@ -214,10 +214,11 @@ export default function ProjectDetail() {
   const [showVersions, setShowVersions] = useState(false);
   const [documentSearch, setDocumentSearch] = useState('');
   const [tableOfContents, setTableOfContents] = useState([]);
+  const documentTextareaRef = useRef(null);
   const loadRequest = useRef(0);
 
   const insertMarkdown = (prefix, suffix = '') => {
-    const textarea = document.querySelector('.documentEditor textarea');
+    const textarea = documentTextareaRef.current;
     if (!textarea) return;
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
@@ -1115,7 +1116,7 @@ export default function ProjectDetail() {
                         <button type="button" onClick={() => insertMarkdown('\n- ')} title="List"><List size={14} /></button>
                         <button type="button" onClick={() => insertMarkdown('\n## ')} title="Heading"><Search size={14} /></button>
                       </div>
-                      <textarea value={documentForm.content} onChange={(event) => setDocumentForm((form) => ({ ...form, content: event.target.value }))} placeholder="Write Markdown here..." disabled={!canManageDocuments} />
+                      <textarea ref={documentTextareaRef} value={documentForm.content} onChange={(event) => setDocumentForm((form) => ({ ...form, content: event.target.value }))} placeholder="Write Markdown here..." disabled={!canManageDocuments} />
                     </div>
                   )}
                 </div>
