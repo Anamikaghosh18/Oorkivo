@@ -29,6 +29,7 @@ class UserPreferences(models.Model):
         OVERVIEW = 'OVERVIEW', 'Overview'
         TASKS = 'TASKS', 'Tasks'
         ACTIVITY = 'ACTIVITY', 'Activity'
+        DOCS = 'DOCS', 'Docs'
 
     class TaskOpenBehavior(models.TextChoices):
         SAME_PAGE = 'SAME_PAGE', 'Same page'
