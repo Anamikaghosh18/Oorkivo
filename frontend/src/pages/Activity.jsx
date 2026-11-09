@@ -205,7 +205,6 @@ export default function Activity() {
                 const copy = ACTION_COPY[activity.action] ?? activity.action.toLowerCase().replaceAll('_', ' ');
                 return (
                   <li className={styles.event} key={activity.id}>
-                    <span className={styles.timelineRule} aria-hidden="true" />
                     <Avatar user={activity.actor} size={34} className={styles.avatar} />
                     <div className={styles.eventContent}>
                       <div className={styles.eventTopline}>

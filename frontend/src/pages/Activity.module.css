@@ -169,29 +169,16 @@
 }
 
 .timeline {
-  position: relative;
   margin: 0;
-  padding: 8px 0 0;
+  padding: 0;
   list-style: none;
 }
 
-.timeline::before {
-  position: absolute;
-  top: 31px;
-  bottom: 25px;
-  left: 16px;
-  width: 1px;
-  background: var(--color-border);
-  content: '';
-}
-
 .event {
-  position: relative;
-  display: grid;
-  grid-template-columns: 34px minmax(0, 1fr);
-  align-items: start;
-  gap: 13px;
-  padding: 15px 4px 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 0;
   border-bottom: 1px solid var(--color-border-subtle);
 }
 
@@ -200,29 +187,32 @@
 }
 
 .avatar {
-  z-index: 1;
+  flex-shrink: 0;
   border: 2px solid var(--color-surface);
 }
 
 .eventContent {
-  display: grid;
+  flex: 1;
   min-width: 0;
-  gap: 5px;
-  padding-top: 1px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .eventTopline {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 14px;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .eventTopline p {
+  flex: 1;
   min-width: 0;
   color: var(--color-text-secondary);
   font-size: var(--font-size-sm);
-  line-height: var(--leading-normal);
+  line-height: 1.4;
 }
 
 .eventTopline strong {
@@ -241,19 +231,17 @@
 
 .subject {
   display: inline-flex;
-  width: fit-content;
-  max-width: 100%;
   align-items: center;
   gap: 4px;
   color: var(--color-text-primary);
   font-size: var(--font-size-xs);
   font-weight: 600;
+  text-decoration: none;
 }
 
 .subject span {
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .subject svg {
@@ -268,7 +256,6 @@
 }
 
 .details {
-  width: fit-content;
   padding: 2px 0 2px 8px;
   border-left: 2px solid var(--color-border);
   color: var(--color-text-secondary);
@@ -276,11 +263,8 @@
 }
 
 .context {
-  overflow: hidden;
   color: var(--color-text-tertiary);
   font-size: var(--font-size-2xs);
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .error {
