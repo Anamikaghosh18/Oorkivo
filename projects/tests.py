@@ -5,7 +5,7 @@ from django.core.exceptions import ValidationError
 
 from communication.models import Activity, Notification
 from organizations.models import Organization, OrganizationMembership
-from projects.models import Project, ProjectMembership, Sprint
+from projects.models import Project, ProjectDocument, ProjectMembership, Sprint
 from tasks.models import Task
 from users.models import User
 
@@ -173,6 +173,93 @@ class ProjectMilestoneAccessTests(TestCase):
         self.assertEqual(client.get(url).status_code, 200)
         response = client.post(url, {'title': 'Restricted milestone'}, format='json')
         self.assertEqual(response.status_code, 403)
+
+
+class ProjectDocumentAccessTests(TestCase):
+    def setUp(self):
+        self.contributor = User.objects.create_user(
+            username='doc-contributor', email='doc-contributor@example.com', password='password'
+        )
+        self.viewer = User.objects.create_user(
+            username='doc-viewer', email='doc-viewer@example.com', password='password'
+        )
+        organization = Organization.objects.create(name='Docs workspace')
+        for user in (self.contributor, self.viewer):
+            OrganizationMembership.objects.create(user=user, organization=organization)
+        self.project = Project.objects.create(organization=organization, name='Docs project')
+        ProjectMembership.objects.create(
+            project=self.project, user=self.contributor,
+            role=ProjectMembership.ProjectRole.CONTRIBUTOR,
+        )
+        ProjectMembership.objects.create(
+            project=self.project, user=self.viewer,
+            role=ProjectMembership.ProjectRole.VIEWER,
+        )
+
+    def test_contributor_can_create_update_and_delete_document(self):
+        client = APIClient()
+        client.force_authenticate(self.contributor)
+        list_url = reverse('project-documents', kwargs={'pk': self.project.id})
+
+        created = client.post(
+            list_url,
+            {'title': 'RFC: Authentication', 'content': '# Auth\nMarkdown body'},
+            format='json',
+        )
+        self.assertEqual(created.status_code, 201)
+        document_id = created.data['id']
+        self.assertEqual(created.data['created_by']['id'], self.contributor.id)
+
+        detail_url = reverse(
+            'project-document-detail',
+            kwargs={'pk': self.project.id, 'document_id': document_id},
+        )
+        updated = client.patch(detail_url, {'content': '# Auth\nUpdated'}, format='json')
+        self.assertEqual(updated.status_code, 200)
+        self.assertEqual(updated.data['content'], '# Auth\nUpdated')
+        self.assertEqual(updated.data['updated_by']['id'], self.contributor.id)
+
+        self.assertTrue(Activity.objects.filter(
+            project=self.project,
+            action=Activity.ActionTypes.DOCUMENT_CREATED,
+        ).exists())
+        self.assertTrue(Activity.objects.filter(
+            project=self.project,
+            action=Activity.ActionTypes.DOCUMENT_UPDATED,
+        ).exists())
+
+        deleted = client.delete(detail_url)
+        self.assertEqual(deleted.status_code, 204)
+        self.assertFalse(ProjectDocument.objects.filter(pk=document_id).exists())
+        self.assertTrue(Activity.objects.filter(
+            project=self.project,
+            action=Activity.ActionTypes.DOCUMENT_DELETED,
+        ).exists())
+
+    def test_viewer_can_read_but_not_write_documents(self):
+        document = ProjectDocument.objects.create(
+            project=self.project, title='Spec', content='Body',
+            created_by=self.contributor,
+        )
+        client = APIClient()
+        client.force_authenticate(self.viewer)
+        list_url = reverse('project-documents', kwargs={'pk': self.project.id})
+        detail_url = reverse(
+            'project-document-detail',
+            kwargs={'pk': self.project.id, 'document_id': document.id},
+        )
+
+        listed = client.get(list_url)
+        self.assertEqual(listed.status_code, 200)
+        self.assertEqual(len(listed.data), 1)
+        self.assertEqual(client.get(detail_url).status_code, 200)
+        self.assertEqual(client.post(
+            list_url, {'title': 'Nope'}, format='json',
+        ).status_code, 403)
+        self.assertEqual(client.patch(
+            detail_url, {'title': 'Nope'}, format='json',
+        ).status_code, 403)
+        self.assertEqual(client.delete(detail_url).status_code, 403)
 
 
 class ProjectSprintAccessTests(TestCase):

@@ -87,6 +87,28 @@ class ProjectMilestone(models.Model):
         return f"{self.title} - {self.project.name}"
 
 
+class ProjectDocument(models.Model):
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='documents')
+    title = models.CharField(max_length=255)
+    content = models.TextField(blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+        related_name='created_project_documents',
+    )
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='updated_project_documents',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-updated_at']
+
+    def __str__(self):
+        return f"{self.title} - {self.project.name}"
+
+
 class Sprint(models.Model):
     class Status(models.TextChoices):
         PLANNED = 'PLANNED', 'Planned'

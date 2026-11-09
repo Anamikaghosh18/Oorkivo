@@ -6,8 +6,8 @@ from rest_framework.exceptions import NotFound, PermissionDenied
 from django.db import models
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
-from .models import Project, ProjectMembership, ProjectMilestone, Sprint
-from .serializers import ProjectMilestoneSerializer, ProjectSerializer, ProjectMembershipSerializer, SprintSerializer
+from .models import Project, ProjectDocument, ProjectMembership, ProjectMilestone, Sprint
+from .serializers import ProjectDocumentSerializer, ProjectMilestoneSerializer, ProjectSerializer, ProjectMembershipSerializer, SprintSerializer
 from organizations.models import Organization, OrganizationMembership
 from teams.models import TeamMembership
 from organizations.context import active_organization_ids, current_organization_id
@@ -271,6 +271,63 @@ class ProjectViewSet(viewsets.ModelViewSet):
                 )
             return Response(ProjectMilestoneSerializer(milestone).data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['get', 'post'])
+    def documents(self, request, pk=None):
+        project = self.get_object()
+        if request.method == 'GET':
+            documents = ProjectDocument.objects.filter(project=project).select_related('created_by', 'updated_by')
+            return Response(ProjectDocumentSerializer(documents, many=True).data)
+
+        if not self.has_document_permission(project):
+            return Response({'detail': 'Only project contributors or managers can manage documents.'}, status=status.HTTP_403_FORBIDDEN)
+        serializer = ProjectDocumentSerializer(data=request.data, context={'project': project})
+        if serializer.is_valid():
+            document = serializer.save(project=project, created_by=request.user, updated_by=request.user)
+            Activity.objects.create(
+                project=project,
+                actor=request.user,
+                action=Activity.ActionTypes.DOCUMENT_CREATED,
+                details={'document_id': document.id, 'document_title': document.title},
+            )
+            return Response(ProjectDocumentSerializer(document).data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['get', 'patch', 'delete'], url_path=r'documents/(?P<document_id>\d+)')
+    def document_detail(self, request, pk=None, document_id=None):
+        project = self.get_object()
+        document = ProjectDocument.objects.filter(project=project, id=document_id).select_related('created_by', 'updated_by').first()
+        if document is None:
+            return Response({'detail': 'Document not found.'}, status=status.HTTP_404_NOT_FOUND)
+        if request.method == 'GET':
+            return Response(ProjectDocumentSerializer(document).data)
+        if not self.has_document_permission(project):
+            return Response({'detail': 'Only project contributors or managers can manage documents.'}, status=status.HTTP_403_FORBIDDEN)
+        if request.method == 'DELETE':
+            document.delete()
+            Activity.objects.create(
+                project=project,
+                actor=request.user,
+                action=Activity.ActionTypes.DOCUMENT_DELETED,
+                details={'document_title': document.title},
+            )
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        serializer = ProjectDocumentSerializer(document, data=request.data, partial=True)
+        if serializer.is_valid():
+            previous = {'title': document.title, 'content': document.content}
+            document = serializer.save(updated_by=request.user)
+            if any(previous[key] != getattr(document, key) for key in previous):
+                Activity.objects.create(
+                    project=project,
+                    actor=request.user,
+                    action=Activity.ActionTypes.DOCUMENT_UPDATED,
+                    details={'document_id': document.id, 'document_title': document.title},
+                )
+            return Response(ProjectDocumentSerializer(document).data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def has_document_permission(self, project):
+        return self.has_milestone_permission(project)
 
     def has_milestone_permission(self, project):
         return self.check_admin_permission(project) or ProjectMembership.objects.filter(

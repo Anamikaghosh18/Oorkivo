@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Project, ProjectMembership, ProjectMilestone, Sprint
+from .models import Project, ProjectDocument, ProjectMembership, ProjectMilestone, Sprint
 from organizations.models import OrganizationMembership
 from organizations.serializers import UserMinimalSerializer
 from users.models import User
@@ -75,6 +75,19 @@ class ProjectMilestoneSerializer(serializers.ModelSerializer):
         if not task_list:
             return 0
         return round(sum(task.status == Task.Status.COMPLETED for task in task_list) / len(task_list) * 100)
+
+
+class ProjectDocumentSerializer(serializers.ModelSerializer):
+    created_by = UserMinimalSerializer(read_only=True)
+    updated_by = UserMinimalSerializer(read_only=True)
+
+    class Meta:
+        model = ProjectDocument
+        fields = [
+            'id', 'project', 'title', 'content', 'created_by', 'updated_by',
+            'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'project', 'created_by', 'updated_by', 'created_at', 'updated_at']
 
 
 class SprintSerializer(serializers.ModelSerializer):
