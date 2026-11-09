@@ -68,7 +68,7 @@
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
   border: 0;
-  border-left: 1px solid var(--color-border-subtle);
+  border-left: 1.5px solid var(--color-border-subtle);
   border-radius: 0;
   background: var(--color-surface);
 }
@@ -222,7 +222,7 @@
 
 .savedViewItem button + button {
   padding: 0 7px;
-  border-left: 1px solid var(--color-border-subtle);
+  border-left: 1.5px solid var(--color-border-subtle);
   color: var(--color-text-tertiary);
 }
 
@@ -393,7 +393,7 @@
 .listPanel {
   overflow: hidden;
   border: 0;
-  border-top: 1px solid var(--color-border);
+  border-top: 1.5px solid var(--color-border);
   border-radius: 0;
   background: transparent;
 }
@@ -405,7 +405,7 @@
   gap: var(--space-4);
   min-height: 64px;
   padding: var(--space-3) var(--space-5);
-  border-bottom: 1px solid var(--color-border-subtle);
+  border-bottom: 1.5px solid var(--color-border-subtle);
   color: inherit;
   text-decoration: none;
 }
@@ -701,7 +701,7 @@ a.row:hover {
   gap: 4px;
   overflow-x: auto;
   margin-bottom: var(--space-6);
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1.5px solid var(--color-border);
   scrollbar-width: thin;
 }
 
@@ -770,7 +770,7 @@ a.row:hover {
   gap: 4px;
   overflow-x: auto;
   margin: 0 0 var(--space-5);
-  border-bottom: 1px solid var(--color-border-subtle);
+  border-bottom: 1.5px solid var(--color-border-subtle);
 }
 
 .myWorkFilters button {
@@ -838,7 +838,7 @@ a.row:hover {
   justify-content: space-between;
   gap: 8px 18px;
   padding: 10px 4px;
-  border-bottom: 1px solid var(--color-border-subtle);
+  border-bottom: 1.5px solid var(--color-border-subtle);
 }
 
 .workTaskTitle,
@@ -1070,7 +1070,7 @@ a.row:hover {
 .savedViewContent { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; padding: 6px 0 10px; }
 .savedViewItem { display: inline-flex; overflow: hidden; align-items: center; border: 1px solid var(--color-border); border-radius: var(--radius-full); background: var(--color-surface); }
 .savedViewItem button { display: inline-flex; min-height: 29px; align-items: center; gap: 5px; padding: 0 9px; border: 0; background: transparent; color: var(--color-text-secondary); font: inherit; font-size: var(--font-size-xs); cursor: pointer; }
-.savedViewItem button + button { padding: 0 7px; border-left: 1px solid var(--color-border-subtle); }
+.savedViewItem button + button { padding: 0 7px; border-left: 1.5px solid var(--color-border-subtle); }
 .saveViewForm { display: flex; flex-wrap: wrap; gap: 6px; }
 .saveViewForm input { width: 150px; min-height: 30px; padding: 0 8px; border: 1px solid var(--color-border); border-radius: var(--radius-base); background: var(--color-surface); color: var(--color-text-primary); font: inherit; font-size: var(--font-size-xs); }
 .saveViewForm > button { display: inline-flex; min-height: 30px; align-items: center; gap: 5px; padding: 0 9px; border: 1px solid var(--color-border); border-radius: var(--radius-base); background: var(--color-surface); color: var(--color-sage-dark); font: inherit; font-size: var(--font-size-xs); cursor: pointer; }
@@ -1119,8 +1119,8 @@ a.row:hover {
 .boardTask time { text-align: right; }
 .boardEmpty { margin: 8px 1px; color: var(--color-text-tertiary); font-size: var(--font-size-xs); }
 
-.listPanel { overflow: visible; border-top: 1px solid var(--color-border); border-bottom: 1px solid var(--color-border); background: transparent; }
-.listRow { display: grid; grid-template-columns: minmax(230px, 2fr) minmax(120px, 0.9fr) minmax(100px, 0.7fr) minmax(120px, 0.8fr); align-items: center; gap: 12px; min-height: 52px; padding: 7px 12px; border-bottom: 1px solid var(--color-border-subtle); }
+.listPanel { overflow: visible; border-top: 1.5px solid var(--color-border); border-bottom: 1.5px solid var(--color-border); background: transparent; }
+.listRow { display: grid; grid-template-columns: minmax(230px, 2fr) minmax(120px, 0.9fr) minmax(100px, 0.7fr) minmax(120px, 0.8fr); align-items: center; gap: 12px; min-height: 52px; padding: 7px 12px; border-bottom: 1.5px solid var(--color-border-subtle); }
 .listRow:last-child { border-bottom: 0; }
 .listHeader { min-height: 37px; background: var(--color-surface); color: var(--color-text-tertiary); font-size: 10px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; }
 .listTask { display: flex; min-width: 0; align-items: center; gap: 10px; }
@@ -1185,9 +1185,9 @@ a.row:hover {
 .backlogToolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: var(--space-5); }
 .backlogToolbar .searchBox { flex: 1 1 200px; width: auto; max-width: 320px; }
 .backlogGroups { display: flex; flex-direction: column; gap: var(--space-5); }
-.backlogGroup > h3 { display: flex; align-items: center; justify-content: space-between; margin: 0; padding: 0 3px 8px; border-bottom: 1px solid var(--color-border); }
+.backlogGroup > h3 { display: flex; align-items: center; justify-content: space-between; margin: 0; padding: 0 3px 8px; border-bottom: 1.5px solid var(--color-border); }
 .backlogGroup > h3 .priorityLabel { font-size: 11px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; }
-.backlogRow { display: grid; grid-template-columns: minmax(190px, 1.5fr) minmax(140px, 1fr) minmax(150px, 1fr) minmax(130px, auto); align-items: center; gap: 10px 16px; min-height: 50px; padding: 8px 4px; border-bottom: 1px solid var(--color-border-subtle); }
+.backlogRow { display: grid; grid-template-columns: minmax(190px, 1.5fr) minmax(140px, 1fr) minmax(150px, 1fr) minmax(130px, auto); align-items: center; gap: 10px 16px; min-height: 50px; padding: 8px 4px; border-bottom: 1.5px solid var(--color-border-subtle); }
 .backlogMeta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sprintMove { min-height: 31px; padding: 4px 8px; border: 1px solid var(--color-border); border-radius: var(--radius-base); background: var(--color-surface); color: var(--color-text-secondary); font: inherit; font-size: var(--font-size-xs); }
 
@@ -1218,7 +1218,7 @@ a.row:hover {
 .sprintProgressSummary { display: flex; align-items: center; gap: 12px; margin: 0 0 var(--space-4); color: var(--color-text-secondary); font-size: var(--font-size-xs); }
 .sprintProgressSummary .sprintProgressTrack { flex: 1; max-width: 420px; }
 .workspaceActions { display: flex; justify-content: flex-end; margin: 0 0 var(--space-3); }
-.sprintTaskRow { display: flex; min-height: 49px; align-items: center; gap: 14px; padding: 7px 11px; border-bottom: 1px solid var(--color-border-subtle); }
+.sprintTaskRow { display: flex; min-height: 49px; align-items: center; gap: 14px; padding: 7px 11px; border-bottom: 1.5px solid var(--color-border-subtle); }
 .sprintTaskRow > .listTaskTitle { flex: 1; }
 .projectLink { display: inline-flex; align-items: center; gap: 4px; margin-top: var(--space-4); color: var(--color-sage-dark); font-size: var(--font-size-sm); text-decoration: none; }
 .listRowWithAction { grid-template-columns: minmax(210px, 2fr) minmax(110px, 0.9fr) minmax(90px, 0.7fr) minmax(105px, 0.8fr) auto; }
@@ -1327,7 +1327,7 @@ a.row:hover {
   overflow: visible;
   padding: var(--space-4) 0;
   border: 0;
-  border-bottom: 1px solid var(--color-border-subtle);
+  border-bottom: 1.5px solid var(--color-border-subtle);
   border-radius: 0;
   background: var(--color-surface);
 }

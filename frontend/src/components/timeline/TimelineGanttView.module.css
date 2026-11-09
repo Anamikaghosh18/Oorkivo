@@ -1,9 +1,9 @@
-/* ─── Timeline / Gantt Container ─────────────────────────────── */
+﻿/* ─── Timeline / Gantt Container ─────────────────────────────── */
 .timelineContainer {
   display: flex;
   flex-direction: column;
   background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  border: 1.5px solid var(--color-border);
   border-radius: var(--radius-lg, 12px);
   overflow: hidden;
   box-shadow: var(--shadow-sm);
@@ -20,7 +20,7 @@
   justify-content: space-between;
   padding: 10px 16px;
   background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border-subtle);
+  border-bottom: 1.5px solid var(--color-border-subtle);
   gap: 10px;
   flex-wrap: wrap;
 }
@@ -38,7 +38,7 @@
   background: var(--color-surface-raised);
   padding: 2px;
   border-radius: var(--radius-base);
-  border: 1px solid var(--color-border);
+  border: 1.5px solid var(--color-border);
 }
 
 .mobileViewBtn {
@@ -68,7 +68,7 @@
   align-items: center;
   gap: 8px;
   background: var(--color-bg);
-  border: 1px solid var(--color-border);
+  border: 1.5px solid var(--color-border);
   border-radius: var(--radius-base);
   padding: 5px 10px;
   font-size: 12px;
@@ -128,7 +128,7 @@
   display: flex;
   align-items: center;
   gap: 5px;
-  border: 1px solid var(--color-border);
+  border: 1.5px solid var(--color-border);
   background: var(--color-surface);
   padding: 4px 10px;
   font-size: 11px;
@@ -168,7 +168,7 @@
   gap: 16px;
   padding: 8px 16px;
   background: var(--color-surface-raised);
-  border-bottom: 1px solid var(--color-border-subtle);
+  border-bottom: 1.5px solid var(--color-border-subtle);
   font-size: 11px;
   color: var(--color-text-secondary);
   overflow-x: auto;
@@ -218,7 +218,7 @@
   width: 300px;
   min-width: 240px;
   max-width: 380px;
-  border-right: 1px solid var(--color-border);
+  border-right: 1.5px solid var(--color-border);
   background: var(--color-surface);
   display: flex;
   flex-direction: column;
@@ -232,7 +232,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid var(--color-border-subtle);
+  border-bottom: 1.5px solid var(--color-border-subtle);
   background: var(--color-surface-raised);
   font-size: 11px;
   font-weight: 600;
@@ -256,7 +256,7 @@
   justify-content: space-between;
   padding: 8px 12px;
   background: var(--color-surface-raised);
-  border-bottom: 1px solid var(--color-border-subtle);
+  border-bottom: 1.5px solid var(--color-border-subtle);
   cursor: pointer;
   user-select: none;
   font-size: 11px;
@@ -295,7 +295,7 @@
   align-items: center;
   padding: 0 12px;
   height: 42px;
-  border-bottom: 1px solid var(--color-border-subtle);
+  border-bottom: 1.5px solid var(--color-border-subtle);
   font-size: 12px;
   color: var(--color-text-primary);
   cursor: pointer;
@@ -359,13 +359,13 @@
   top: 0;
   z-index: 8;
   background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1.5px solid var(--color-border);
 }
 
 .monthRow {
   display: flex;
   height: 26px;
-  border-bottom: 1px solid var(--color-border-subtle);
+  border-bottom: 1.5px solid var(--color-border-subtle);
   background: var(--color-surface-raised);
 }
 
@@ -529,13 +529,13 @@
 .canvasGroupRow {
   height: 38px;
   background: var(--color-surface-raised);
-  border-bottom: 1px solid var(--color-border-subtle);
+  border-bottom: 1.5px solid var(--color-border-subtle);
   box-sizing: border-box;
 }
 
 .canvasRow {
   height: 42px;
-  border-bottom: 1px solid var(--color-border-subtle);
+  border-bottom: 1.5px solid var(--color-border-subtle);
   position: relative;
   display: flex;
   align-items: center;
@@ -657,7 +657,7 @@
 
 /* ─── Unscheduled Drawer ──────────────────────────────────────── */
 .unscheduledDrawer {
-  border-top: 1px solid var(--color-border);
+  border-top: 1.5px solid var(--color-border);
   background: var(--color-surface);
   padding: 8px 16px;
   display: flex;
@@ -676,7 +676,7 @@
 }
 
 .unscheduledCount {
-  border: 1px solid var(--color-border);
+  border: 1.5px solid var(--color-border);
   background: var(--color-surface-raised);
   color: var(--color-text-primary);
   font-weight: 600;
@@ -701,7 +701,7 @@
   align-items: center;
   gap: 5px;
   background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  border: 1.5px solid var(--color-border);
   padding: 3px 8px;
   border-radius: var(--radius-base);
   font-size: 11px;

@@ -9,8 +9,8 @@
   --surface:                #ffffff;
   --color-surface-raised:   #f1f5f9; /* Elevated Well / Header */
   --color-surface-hover:    #e2e8f0; /* Clear Tactile Hover */
-  --color-border:           #e2e8f0; /* Subtle Hairline Border */
-  --color-border-subtle:    #edf2f7;
+  --color-border:           #cbd5e1; /* Subtle Hairline Border */
+  --color-border-subtle:    #e2e8f0;
   --border:                 var(--color-border);
   --border-subtle:          var(--color-border-subtle);
 
@@ -159,8 +159,8 @@
   --surface:                #131519;
   --color-surface-raised:   #1a1d24; /* Distinct raised wells */
   --color-surface-hover:    #242933; /* Noticeable hover tone */
-  --color-border:           #242832; /* Crisp Dark Charcoal Border */
-  --color-border-subtle:    #1a1d24;
+  --color-border:           #2c3240; /* Crisp Dark Charcoal Border */
+  --color-border-subtle:    #222733;
   --border:                 var(--color-border);
   --border-subtle:          var(--color-border-subtle);
 

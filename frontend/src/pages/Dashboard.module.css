@@ -73,8 +73,8 @@
 .overview {
   margin-bottom: var(--space-8);
   padding: var(--space-4) var(--space-5);
-  border-top: 1px solid var(--color-border);
-  border-bottom: 1px solid var(--color-border);
+  border-top: 1.5px solid var(--color-border);
+  border-bottom: 1.5px solid var(--color-border);
   background: var(--color-surface);
 }
 
@@ -102,7 +102,7 @@
   gap: var(--space-2);
   min-height: 40px;
   padding: 0 var(--space-4);
-  border-left: 1px solid var(--color-border-subtle);
+  border-left: 1.5px solid var(--color-border-subtle);
 }
 
 .overviewMetric:first-child {
@@ -173,7 +173,7 @@
 }
 
 .projectList {
-  border-top: 1px solid var(--color-border);
+  border-top: 1.5px solid var(--color-border);
 }
 
 .projectRow {
@@ -182,7 +182,7 @@
   gap: var(--space-4);
   min-height: 90px;
   padding: var(--space-4) var(--space-2);
-  border-bottom: 1px solid var(--color-border-subtle);
+  border-bottom: 1.5px solid var(--color-border-subtle);
   transition: background var(--transition-fast), padding var(--transition-fast);
 }
 
@@ -290,7 +290,7 @@
 .bannerArt { opacity: .82; }
 .overview {
   border-top: 1px solid var(--color-border-subtle);
-  border-bottom: 1px solid var(--color-border-subtle);
+  border-bottom: 1.5px solid var(--color-border-subtle);
   border-radius: 0;
   background: var(--color-surface);
   box-shadow: none;
@@ -300,7 +300,7 @@
 .projectList {
   overflow: visible;
   border: 0;
-  border-top: 1px solid var(--color-border);
+  border-top: 1.5px solid var(--color-border);
   border-radius: 0;
   background: transparent;
 }
@@ -325,7 +325,7 @@
 
 :global([data-theme="dark"]) .welcomeBanner,
 :global([data-theme="dark"]) .sectionEmpty {
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1.5px solid var(--color-border);
 }
 
 .sectionEmpty {
@@ -426,7 +426,7 @@
   top: 10px;
   bottom: 14px;
   left: 5px;
-  width: 1px;
+  width: 2px;
   background: var(--color-border);
   content: '';
 }
@@ -467,11 +467,11 @@
 }
 
 .upcomingList {
-  border-top: 1px solid var(--color-border);
+  border-top: 1.5px solid var(--color-border);
 }
 
 .upcomingList li {
-  border-bottom: 1px solid var(--color-border-subtle);
+  border-bottom: 1.5px solid var(--color-border-subtle);
 }
 
 .upcomingList a {
@@ -555,7 +555,7 @@
     row-gap: 14px;
   }
   .overviewMetric:nth-child(even) {
-    border-left: 1px solid var(--color-border-subtle);
+    border-left: 1.5px solid var(--color-border-subtle);
   }
   .overviewMetric:nth-child(odd) {
     border-left: none;
@@ -569,7 +569,7 @@
   .overviewMetric {
     border-left: none !important;
     padding-left: 0 !important;
-    border-bottom: 1px solid var(--color-border-subtle);
+    border-bottom: 1.5px solid var(--color-border-subtle);
     padding-bottom: 8px;
   }
   .overviewMetric:last-child {

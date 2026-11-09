@@ -1,6 +1,6 @@
 ﻿.timeline {
   background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  border: 1.5px solid var(--color-border);
   border-radius: var(--radius-lg);
   display: flex;
   flex-direction: column;
@@ -21,7 +21,7 @@
 
 .header {
   padding: var(--space-4) var(--space-5);
-  border-bottom: 1px solid var(--color-border-subtle);
+  border-bottom: 1.5px solid var(--color-border-subtle);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -81,7 +81,7 @@
   left: 12px;
   top: 0;
   bottom: -20px;
-  width: 1px;
+  width: 2px;
   background: var(--color-border-subtle);
 }
 
@@ -140,7 +140,7 @@
 .commentBody {
   flex: 1;
   background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  border: 1.5px solid var(--color-border);
   border-radius: var(--radius-md);
   padding: var(--space-3) var(--space-4);
 }
@@ -178,7 +178,7 @@
   align-items: center;
   gap: 8px;
   padding: 8px;
-  border: 1px solid var(--color-border);
+  border: 1.5px solid var(--color-border);
   border-radius: var(--radius-sm);
   background: var(--color-surface);
   color: var(--color-text-secondary);
@@ -224,7 +224,7 @@
 .editForm textarea {
   width: 100%;
   padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--color-border);
+  border: 1.5px solid var(--color-border);
   border-radius: var(--radius-sm);
   background: var(--color-surface);
   color: var(--color-text-primary);
@@ -244,7 +244,7 @@
   align-items: center;
   gap: 4px;
   padding: 5px 8px;
-  border: 1px solid var(--color-border);
+  border: 1.5px solid var(--color-border);
   border-radius: var(--radius-sm);
   background: var(--color-surface);
   color: var(--color-text-secondary);
@@ -286,7 +286,7 @@
   right: 0;
   top: calc(100% + 4px);
   background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  border: 1.5px solid var(--color-border);
   border-radius: var(--radius-base);
   box-shadow: var(--shadow-md);
   padding: 4px;
@@ -330,7 +330,7 @@
 .inputWrap {
   flex: 1;
   background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  border: 1.5px solid var(--color-border);
   border-radius: var(--radius-base);
   overflow: hidden;
   transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
@@ -378,7 +378,7 @@
   height: 28px;
   flex: 0 0 auto;
   place-items: center;
-  border: 1px solid var(--color-border);
+  border: 1.5px solid var(--color-border);
   border-radius: var(--radius-sm);
   background: var(--color-surface);
   color: var(--color-text-secondary);
@@ -405,7 +405,7 @@
   align-items: center;
   gap: 6px;
   padding: 3px 5px 3px 8px;
-  border: 1px solid var(--color-border);
+  border: 1.5px solid var(--color-border);
   border-radius: var(--radius-sm);
   background: var(--color-surface);
   color: var(--color-text-secondary);

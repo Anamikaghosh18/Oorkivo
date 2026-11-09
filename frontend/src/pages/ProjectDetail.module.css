@@ -19,7 +19,7 @@
   align-items: center;
   gap: 24px;
   padding: 0 0 26px;
-  border-bottom: 1px solid var(--color-border-subtle);
+  border-bottom: 1.5px solid var(--color-border-subtle);
 }
 
 .projectTabs {
@@ -27,7 +27,7 @@
   gap: 4px;
   overflow-x: auto;
   margin: var(--space-5) 0 var(--space-6);
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1.5px solid var(--color-border);
   scrollbar-width: thin;
 }
 
@@ -111,7 +111,7 @@
   margin: 0;
   padding: 0;
   list-style: none;
-  border-top: 1px solid var(--color-border);
+  border-top: 1.5px solid var(--color-border);
 }
 
 .backlogList li {
@@ -121,7 +121,7 @@
   justify-content: space-between;
   min-width: 0;
   padding: 14px 2px;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1.5px solid var(--color-border);
 }
 
 .backlogList li > a {
@@ -260,7 +260,7 @@
 
 .sprintTasks {
   margin-top: 16px;
-  border-top: 1px solid var(--color-border);
+  border-top: 1.5px solid var(--color-border);
   padding-top: 12px;
 }
 
@@ -295,7 +295,7 @@
 .sprintActions {
   justify-content: flex-start;
   margin-top: 12px;
-  border-top: 1px solid var(--color-border);
+  border-top: 1.5px solid var(--color-border);
   padding-top: 11px;
 }
 
@@ -525,7 +525,7 @@
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
   margin: 20px 0 30px;
-  border-bottom: 1px solid var(--color-border-subtle);
+  border-bottom: 1.5px solid var(--color-border-subtle);
 }
 
 .factItem {
@@ -534,7 +534,7 @@
   align-items: center;
   gap: 10px;
   padding: 0 14px 18px;
-  border-right: 1px solid var(--color-border-subtle);
+  border-right: 1.5px solid var(--color-border-subtle);
 }
 
 .factItem:first-child { padding-left: 0; }
@@ -592,7 +592,7 @@
 }
 
 .milestoneList { padding-top: 5px; }
-.milestoneList > li { border-bottom: 1px solid var(--color-border-subtle); }
+.milestoneList > li { border-bottom: 1.5px solid var(--color-border-subtle); }
 
 .milestoneButton {
   display: grid;
@@ -746,7 +746,7 @@
   top: 5px;
   bottom: 6px;
   left: 3px;
-  width: 1px;
+  width: 2px;
   background: var(--color-border);
   content: '';
 }
@@ -851,7 +851,7 @@
   display: flex;
   gap: 9px;
   padding: 10px 0;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1.5px solid var(--color-border);
 }
 
 .activityMarker {
@@ -890,7 +890,7 @@
   justify-content: space-between;
   gap: 14px;
   padding-bottom: 13px;
-  border-bottom: 1px solid var(--color-border-subtle);
+  border-bottom: 1.5px solid var(--color-border-subtle);
 }
 
 .sectionHeading h2 {
@@ -964,7 +964,7 @@
   display: flex;
   gap: 9px;
   padding: 12px 2px;
-  border-bottom: 1px solid var(--color-border-subtle);
+  border-bottom: 1.5px solid var(--color-border-subtle);
 }
 
 .discussionContent {
@@ -1042,7 +1042,7 @@
   align-items: center;
   gap: 9px;
   padding: 8px 3px;
-  border-bottom: 1px solid var(--color-border-subtle);
+  border-bottom: 1.5px solid var(--color-border-subtle);
   color: inherit;
   text-decoration: none;
   transition: background .15s ease;
@@ -1177,7 +1177,7 @@
   min-height: 56px;
   align-items: center;
   gap: 9px;
-  border-bottom: 1px solid var(--color-border-subtle);
+  border-bottom: 1.5px solid var(--color-border-subtle);
 }
 
 .memberInfo {
@@ -1256,7 +1256,7 @@
   grid-template-columns: minmax(0, 1fr);
   gap: var(--space-2);
   padding: var(--space-3) 0;
-  border-bottom: 1px solid var(--color-border-subtle);
+  border-bottom: 1.5px solid var(--color-border-subtle);
 }
 
 .addProjectMemberForm label {
@@ -1393,7 +1393,7 @@
   min-height: 0;
   padding: 28px 32px;
   border: 0;
-  border-bottom: 1px solid var(--color-border-subtle);
+  border-bottom: 1.5px solid var(--color-border-subtle);
   border-radius: 0;
   background: var(--color-surface);
   box-shadow: none;
@@ -1458,8 +1458,8 @@
 .factItem:nth-child(3n + 2),
 .factItem:nth-child(3n) { background: var(--color-surface); }
 .emptyTasks {
-  border-top: 1px solid var(--color-border);
-  border-bottom: 1px solid var(--color-border);
+  border-top: 1.5px solid var(--color-border);
+  border-bottom: 1.5px solid var(--color-border);
   border-radius: 0;
   background: var(--color-surface);
 }
@@ -1500,7 +1500,7 @@
   min-height: 82px;
   padding: 16px;
   border: 0;
-  border-bottom: 1px solid var(--color-border-subtle);
+  border-bottom: 1.5px solid var(--color-border-subtle);
   border-radius: 0;
   background: rgba(255, 253, 248, 0.24);
 }
