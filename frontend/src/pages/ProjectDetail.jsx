@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { NavLink, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { CalendarDays, CheckCircle2, Circle, Clock3, FolderKanban, Users, Plus, ChevronDown, Activity as ActivityIcon, UserPlus } from 'lucide-react';
+import { CalendarDays, CheckCircle2, Circle, Clock3, FolderKanban, Users, Plus, ChevronDown, Activity as ActivityIcon, UserPlus, FileText, Eye, Pencil, Trash2 } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import OverlayDetailShell from '../components/layout/OverlayDetailShell';
 import Avatar from '../components/Avatar';
 import TimelineGanttView from '../components/timeline/TimelineGanttView';
@@ -202,6 +204,12 @@ export default function ProjectDetail() {
   const [discussionError, setDiscussionError] = useState('');
   const [milestonesError, setMilestonesError] = useState('');
   const [activityError, setActivityError] = useState('');
+  const [documents, setDocuments] = useState([]);
+  const [documentForm, setDocumentForm] = useState({ id: null, title: '', content: '' });
+  const [documentEditorOpen, setDocumentEditorOpen] = useState(false);
+  const [documentPreviewMode, setDocumentPreviewMode] = useState(false);
+  const [documentSaving, setDocumentSaving] = useState(false);
+  const [documentError, setDocumentError] = useState('');
   const loadRequest = useRef(0);
 
   const load = useCallback(async () => {
@@ -254,10 +262,11 @@ export default function ProjectDetail() {
       } else {
         setOrganizationMembers([]);
       }
-      const [milestonesResult, activityResult, sprintsResult] = await Promise.allSettled([
+      const [milestonesResult, activityResult, sprintsResult, documentsResult] = await Promise.allSettled([
         projectsApi.milestones(id),
         projectsApi.activity(id),
         projectsApi.sprints(id),
+        projectsApi.documents(id),
       ]);
       if (!isCurrent()) return;
       if (milestonesResult.status === 'fulfilled') setMilestones(getRows(milestonesResult.value.data));
@@ -266,6 +275,8 @@ export default function ProjectDetail() {
       else setActivityError('Project activity could not be loaded.');
       if (sprintsResult.status === 'fulfilled') setSprints(getRows(sprintsResult.value.data));
       else setSprintActionError('Project sprints could not be loaded.');
+      if (documentsResult.status === 'fulfilled') setDocuments(getRows(documentsResult.value.data));
+      else setDocumentError('Project documents could not be loaded.');
       if (tasksResult.status === 'fulfilled') setTasks(getRows(tasksResult.value.data));
       else {
         setTasks([]);
@@ -522,6 +533,83 @@ export default function ProjectDetail() {
     }
   };
 
+  const canManageDocuments = members.some((membership) =>
+    String(membership.user?.id) === String(user?.id) &&
+    ['MANAGER', 'CONTRIBUTOR'].includes(membership.role)
+  ) || Boolean(org?.permissions?.can_manage_members);
+
+  const openDocument = (document) => {
+    setDocumentForm({
+      id: document.id,
+      title: document.title,
+      content: document.content,
+    });
+    setDocumentPreviewMode(false);
+    setDocumentEditorOpen(true);
+  };
+
+  const closeDocument = () => {
+    setDocumentForm({ id: null, title: '', content: '' });
+    setDocumentPreviewMode(false);
+    setDocumentEditorOpen(false);
+    setDocumentError('');
+  };
+
+  const createDocument = () => {
+    setDocumentForm({ id: null, title: '', content: '' });
+    setDocumentPreviewMode(false);
+    setDocumentEditorOpen(true);
+  };
+
+  const saveDocument = async (event) => {
+    event.preventDefault();
+    if (!documentForm.title.trim()) return;
+    setDocumentSaving(true);
+    setDocumentError('');
+    try {
+      let response;
+      if (documentForm.id) {
+        response = await projectsApi.updateDocument(id, documentForm.id, {
+          title: documentForm.title,
+          content: documentForm.content,
+        });
+        setDocuments((current) => current.map((doc) => doc.id === documentForm.id ? response.data : doc));
+      } else {
+        response = await projectsApi.createDocument(id, {
+          title: documentForm.title,
+          content: documentForm.content,
+        });
+        setDocuments((current) => [response.data, ...current]);
+      }
+      const history = await projectsApi.activity(id);
+      setActivity(getRows(history.data));
+      closeDocument();
+    } catch (saveError) {
+      const detail = saveError.response?.data?.detail;
+      setDocumentError(typeof detail === 'string' ? detail : 'Document could not be saved. Check your permissions.');
+    } finally {
+      setDocumentSaving(false);
+    }
+  };
+
+  const deleteDocument = async (documentId) => {
+    if (!confirm('Delete this document? This cannot be undone.')) return;
+    setDocumentSaving(true);
+    setDocumentError('');
+    try {
+      await projectsApi.deleteDocument(id, documentId);
+      setDocuments((current) => current.filter((doc) => doc.id !== documentId));
+      const history = await projectsApi.activity(id);
+      setActivity(getRows(history.data));
+      closeDocument();
+    } catch (deleteError) {
+      const detail = deleteError.response?.data?.detail;
+      setDocumentError(typeof detail === 'string' ? detail : 'Document could not be deleted. Check your permissions.');
+    } finally {
+      setDocumentSaving(false);
+    }
+  };
+
   return (
     <OverlayDetailShell
       centerTitle="Project workspace"
@@ -562,6 +650,7 @@ export default function ProjectDetail() {
                 ['TASKS', 'Tasks'],
                 ['TIMELINE', 'Timeline'],
                 ['ACTIVITY', 'Activity'],
+                ['DOCS', 'Docs'],
               ].map(([key, label]) => (
                 <button key={key} id={`project-tab-${key.toLowerCase()}`} type="button" role="tab" aria-selected={activeTab === key} aria-controls={`project-panel-${key.toLowerCase()}`} className={activeTab === key ? styles.projectTabActive : ''} onClick={() => setActiveTab(key)}>
                   {label}
@@ -893,6 +982,48 @@ export default function ProjectDetail() {
               <div className={styles.sectionHeading}><div><span className={styles.sectionEyebrow}>Project history</span><h2>Recent activity</h2></div></div>
               <ActivityFeed items={activity} tasks={tasks} error={activityError} taskLinkState={taskLinkState} />
               <section className={styles.discussionSection}><div className={styles.sectionHeading}><div><span className={styles.sectionEyebrow}>Conversation</span><h2>Recent discussion</h2></div></div><RecentDiscussion comments={discussion} error={discussionError} taskLinkState={taskLinkState} /></section>
+            </section>}
+
+            {activeTab === 'DOCS' && <section className={styles.workspacePanel} id="project-panel-docs" role="tabpanel" aria-labelledby="project-tab-docs">
+              <div className={styles.sectionHeading}>
+                <div><span className={styles.sectionEyebrow}>Knowledge</span><h2>Project documents</h2></div>
+                {canManageDocuments && <button type="button" className={styles.primaryButton} onClick={createDocument}><Plus size={14} /> New document</button>}
+              </div>
+              {documentError && <p className={styles.inlineError} role="alert">{documentError}</p>}
+              {documentEditorOpen ? (
+                <div className={styles.documentEditor}>
+                  <div className={styles.documentEditorHeader}>
+                    <div className={styles.documentEditorTitle}>
+                      <input value={documentForm.title} onChange={(event) => setDocumentForm((form) => ({ ...form, title: event.target.value }))} placeholder="Document title" maxLength={255} disabled={!canManageDocuments} />
+                      <div className={styles.documentEditorActions}>
+                        {canManageDocuments && <button type="button" onClick={() => setDocumentPreviewMode((prev) => !prev)} className={styles.secondaryButton}>{documentPreviewMode ? <Pencil size={14} /> : <Eye size={14} />}{documentPreviewMode ? 'Edit' : 'Preview'}</button>}
+                        {canManageDocuments && documentForm.id && <button type="button" onClick={() => deleteDocument(documentForm.id)} className={styles.dangerButton}><Trash2 size={14} /> Delete</button>}
+                        <button type="button" onClick={closeDocument} className={styles.secondaryButton}>Cancel</button>
+                        {canManageDocuments && <button type="button" onClick={saveDocument} disabled={documentSaving} className={styles.primaryButton}>{documentSaving ? 'Saving…' : 'Save'}</button>}
+                      </div>
+                    </div>
+                  </div>
+                  {documentPreviewMode ? (
+                    <div className={styles.documentPreview}><ReactMarkdown remarkPlugins={[remarkGfm]}>{documentForm.content}</ReactMarkdown></div>
+                  ) : (
+                    <textarea value={documentForm.content} onChange={(event) => setDocumentForm((form) => ({ ...form, content: event.target.value }))} placeholder="Write Markdown here..." disabled={!canManageDocuments} />
+                  )}
+                </div>
+              ) : documents.length ? (
+                <ul className={styles.documentList}>
+                  {documents.map((document) => (
+                    <li key={document.id}>
+                      <button type="button" onClick={() => openDocument(document)} className={styles.documentCard}>
+                        <span className={styles.documentIcon}><FileText size={16} /></span>
+                        <div className={styles.documentInfo}>
+                          <strong>{document.title}</strong>
+                          <small>Updated {new Date(document.updated_at).toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' })} by {fullName(document.updated_by)}</small>
+                        </div>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : <div className={styles.emptyTasks}><FileText size={20} /><strong>No documents yet</strong><span>Project specifications and RFCs will appear here.</span></div>}
             </section>}
           </>
         ) : null}
