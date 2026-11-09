@@ -5,6 +5,8 @@ import Projects   from './pages/Projects';
 import ProjectDetail from './pages/ProjectDetail';
 import Tasks      from './pages/Tasks';
 import Teams      from './pages/Teams';
+import Chat       from './pages/Chat';
+import Activity   from './pages/Activity';
 import TaskDetail from './pages/TaskDetail';
 import Settings from './pages/Settings';
 import Progress from './pages/Progress';
@@ -58,10 +60,11 @@ function AppRoutes() {
         <Route path="/settings/:section" element={<RequireAuth><Settings /></RequireAuth>} />
         <Route path="/profile" element={<RequireAuth><Navigate to="/settings/profile" replace /></RequireAuth>} />
         <Route path="/teams" element={<RequireAuth><Teams /></RequireAuth>} />
+        <Route path="/chat" element={<RequireAuth><Chat /></RequireAuth>} />
         <Route path="/progress" element={<RequireAuth><Progress /></RequireAuth>} />
         <Route path="/tasks" element={<RequireAuth><Tasks /></RequireAuth>} />
         <Route path="/members" element={<RequireAuth><Placeholder label="Members" /></RequireAuth>} />
-        <Route path="/activity" element={<RequireAuth><Placeholder label="Activity" /></RequireAuth>} />
+        <Route path="/activity" element={<RequireAuth><Activity /></RequireAuth>} />
         <Route path="*" element={<Placeholder label="404 — Page not found" />} />
       </Routes>
       {backgroundLocation && (

@@ -93,6 +93,13 @@ DATABASES = {
     'default': env.db('DATABASE_URL', default=f'sqlite:///{BASE_DIR / "db.sqlite3"}')
 }
 
+# Ensure SSL is configured for remote PostgreSQL providers (e.g. Render, Neon, Supabase)
+if DATABASES['default'].get('ENGINE') == 'django.db.backends.postgresql':
+    db_host = DATABASES['default'].get('HOST', '')
+    if db_host and db_host not in ('localhost', '127.0.0.1'):
+        DATABASES['default'].setdefault('OPTIONS', {})
+        DATABASES['default']['OPTIONS'].setdefault('sslmode', 'require')
+
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators

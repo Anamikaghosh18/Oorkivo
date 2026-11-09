@@ -177,9 +177,7 @@ export default function TaskDetail() {
   const [projectTasks, setProjectTasks] = useState([]);
   const [sprints, setSprints] = useState([]);
   const [attachments, setAttachments] = useState([]);
-  const [uploadProgress, setUploadProgress] = useState(0);
   const [attachmentError, setAttachmentError] = useState("");
-  const [attachmentLoading, setAttachmentLoading] = useState(false);
   const [activityError, setActivityError] = useState("");
   const [projectTasksError, setProjectTasksError] = useState("");
   const [sprintsError, setSprintsError] = useState("");
@@ -403,10 +401,16 @@ export default function TaskDetail() {
     }
   };
 
-  const handleAddComment = async (content) => {
+  const handleAddComment = async (content, files = []) => {
     setActionError("");
     try {
-      const response = await tasksApi.addComment(id, { content });
+      let payload = { content };
+      if (files.length) {
+        payload = new FormData();
+        payload.append("content", content);
+        files.forEach((file) => payload.append("files", file));
+      }
+      const response = await tasksApi.addComment(id, payload);
       setComments((current) => [...current, response.data]);
       try {
         const history = await tasksApi.activity(id);
@@ -419,8 +423,10 @@ export default function TaskDetail() {
           ),
         );
       }
+      return true;
     } catch (error) {
       setActionError(getErrorMessage(error, "Could not post your comment."));
+      return false;
     }
   };
 
@@ -515,59 +521,6 @@ export default function TaskDetail() {
     }
   };
 
-  const handleUploadAttachment = async (event) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
-    const allowed = /\.(pdf|png|jpe?g|gif|webp|txt|csv|docx?|xlsx?|zip)$/i.test(
-      file.name,
-    );
-    if (!allowed) {
-      setAttachmentError(
-        "Choose a PDF, image, text, spreadsheet, document, or ZIP file.",
-      );
-      return;
-    }
-    if (file.size > 20 * 1024 * 1024) {
-      setAttachmentError("Attachments must be 20 MB or smaller.");
-      return;
-    }
-    setAttachmentError("");
-    setAttachmentLoading(true);
-    setUploadProgress(0);
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const response = await tasksApi.uploadAttachment(
-        id,
-        formData,
-        (progress) => {
-          if (progress.total)
-            setUploadProgress(
-              Math.round((progress.loaded / progress.total) * 100),
-            );
-        },
-      );
-      const attachment = response.data;
-      if (attachment.content_type?.startsWith("image/")) {
-        const preview = await tasksApi.downloadAttachment(id, attachment.id);
-        attachment.previewUrl = URL.createObjectURL(preview.data);
-        previewUrls.current.add(attachment.previewUrl);
-      }
-      setAttachments((current) => [attachment, ...current]);
-    } catch (error) {
-      setAttachmentError(
-        getErrorMessage(
-          error,
-          "Upload failed. Check file type, size, and your task access.",
-        ),
-      );
-    } finally {
-      setAttachmentLoading(false);
-      setUploadProgress(0);
-    }
-  };
-
   const handleDownloadAttachment = async (attachment) => {
     setAttachmentError("");
     try {
@@ -584,6 +537,23 @@ export default function TaskDetail() {
       setAttachmentError(
         getErrorMessage(error, "Could not download this attachment."),
       );
+    }
+  };
+
+  const handleDownloadCommentAttachment = async (attachment) => {
+    setAttachmentError("");
+    try {
+      const response = await communicationApi.downloadCommentAttachment(attachment.id);
+      const url = URL.createObjectURL(response.data);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = attachment.filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error) {
+      setAttachmentError(getErrorMessage(error, "Could not download this comment attachment."));
     }
   };
 
@@ -973,6 +943,7 @@ export default function TaskDetail() {
                         onAddComment={handleAddComment}
                         onDeleteComment={handleDeleteComment}
                         onUpdateComment={handleUpdateComment}
+                        onDownloadAttachment={handleDownloadCommentAttachment}
                         embedded
                       />
                     </div>
@@ -1051,25 +1022,6 @@ export default function TaskDetail() {
                           <span><FileIcon size={20} /></span>
                           <p>No attachments yet</p>
                           <small>Files added to this task will appear here.</small>
-                        </div>
-                      )}
-                      {canEditTask && (
-                        <label className={styles.attachmentUpload}>
-                          <input
-                            type="file"
-                            accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.txt,.csv,.doc,.docx,.xls,.xlsx,.zip"
-                            onChange={handleUploadAttachment}
-                            disabled={attachmentLoading}
-                          />
-                          <Paperclip size={14} />
-                          {attachmentLoading
-                            ? `Uploading… ${uploadProgress}%`
-                            : "Add attachment"}
-                        </label>
-                      )}
-                      {attachmentLoading && (
-                        <div className={styles.uploadProgress}>
-                          <span style={{ width: `${uploadProgress}%` }} />
                         </div>
                       )}
                     </div>

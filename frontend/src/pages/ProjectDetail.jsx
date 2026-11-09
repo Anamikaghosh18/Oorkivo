@@ -4,6 +4,7 @@ import { NavLink, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { CalendarDays, CheckCircle2, Circle, Clock3, FolderKanban, Users, Plus, ChevronDown, Activity as ActivityIcon, UserPlus } from 'lucide-react';
 import OverlayDetailShell from '../components/layout/OverlayDetailShell';
 import Avatar from '../components/Avatar';
+import TimelineGanttView from '../components/timeline/TimelineGanttView';
 import OrganizationMemberSelector from '../components/OrganizationMemberSelector';
 import { selectCurrentOrganization } from '../utils/organizationContext';
 import { authApi, organizationsApi, projectsApi, tasksApi } from '../services/api';
@@ -559,6 +560,7 @@ export default function ProjectDetail() {
                 ['BACKLOG', 'Backlog'],
                 ['SPRINTS', 'Sprints'],
                 ['TASKS', 'Tasks'],
+                ['TIMELINE', 'Timeline'],
                 ['ACTIVITY', 'Activity'],
               ].map(([key, label]) => (
                 <button key={key} id={`project-tab-${key.toLowerCase()}`} type="button" role="tab" aria-selected={activeTab === key} aria-controls={`project-panel-${key.toLowerCase()}`} className={activeTab === key ? styles.projectTabActive : ''} onClick={() => setActiveTab(key)}>
@@ -871,6 +873,20 @@ export default function ProjectDetail() {
               <div className={styles.sectionHeading}><div><span className={styles.sectionEyebrow}>Delivery</span><h2>Project tasks</h2></div><span className={styles.taskTotal}>{tasks.length} total</span></div>
               {!tasksError && <nav className={styles.taskFilters} aria-label="Filter project tasks">{[['ALL', 'All'], ['MINE', `Assigned to me · ${myTaskCount}`], ['DUE_SOON', 'Due soon'], ['OVERDUE', 'Overdue'], ['COMPLETED', 'Completed']].map(([value, label]) => <button type="button" key={value} className={taskFilter === value ? styles.taskFilterActive : ''} aria-pressed={taskFilter === value} onClick={() => setTaskFilter(value)}>{label}</button>)}</nav>}
               {tasksError ? <p className={styles.inlineError}>{tasksError}</p> : <div className={styles.taskGroups}>{taskGroups.map((group) => <section className={styles.taskGroup} key={group.key}><h3>{group.label}<span>{group.tasks.length}</span></h3>{group.tasks.map((task) => <TaskRow key={task.id} task={task} taskLinkState={taskLinkState} />)}</section>)}</div>}
+            </section>}
+
+            {activeTab === 'TIMELINE' && <section className={styles.workspacePanel} id="project-panel-timeline" role="tabpanel" aria-labelledby="project-tab-timeline">
+              <div className={styles.sectionHeading}>
+                <div><span className={styles.sectionEyebrow}>Roadmap & Dependencies</span><h2>Interactive Timeline & Gantt</h2></div>
+                <span className={styles.taskTotal}>{tasks.length} tasks · {milestones.length} milestones · {sprints.length} sprints</span>
+              </div>
+              <TimelineGanttView
+                tasks={tasks}
+                sprints={sprints}
+                milestones={milestones}
+                project={project}
+                onTaskClick={(task) => navigate(`/tasks/${task.id}`, { state: taskLinkState })}
+              />
             </section>}
 
             {activeTab === 'ACTIVITY' && <section className={styles.workspacePanel} id="project-panel-activity" role="tabpanel" aria-labelledby="project-tab-activity">

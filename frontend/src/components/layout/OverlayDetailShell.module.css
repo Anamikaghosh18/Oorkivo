@@ -59,8 +59,8 @@
   height: 27px;
   place-items: center;
   border-radius: 7px;
-  background: var(--color-sage-dark);
-  color: var(--color-surface);
+  background: var(--color-action-bg);
+  color: var(--color-action-text);
   font-size: 12px;
   font-weight: 700;
 }

@@ -49,7 +49,7 @@ class HasTaskAccess(permissions.BasePermission):
             in_project = ProjectMembership.objects.filter(user=user, project=project).exists()
             if in_project:
                 return True
-            if project.team and project.team.memberships.filter(user=user, is_active=True).exists():
+            if project.team and project.team.memberships.filter(user=user).exists():
                 return True
             return False
 

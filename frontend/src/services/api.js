@@ -150,7 +150,9 @@ export const tasksApi = {
   delete:     (id)                => apiClient.delete(`/tasks/${id}/`),
   restore:    (id)                => apiClient.post(`/tasks/${id}/restore/`),
   comments:   (id)                => apiClient.get(`/tasks/${id}/comments/`),
-  addComment: (id, data)          => apiClient.post(`/tasks/${id}/comments/`, data),
+  addComment: (id, data)          => apiClient.post(`/tasks/${id}/comments/`, data, data instanceof FormData
+    ? { headers: { 'Content-Type': 'multipart/form-data' } }
+    : undefined),
   activity:   (id)                => apiClient.get(`/tasks/${id}/activity/`),
   subtasks:   (id)                => apiClient.get(`/tasks/${id}/subtasks/`),
   addSubtask: (id, data)          => apiClient.post(`/tasks/${id}/subtasks/`, data),
@@ -169,6 +171,17 @@ export const tasksApi = {
 
 // ─── Communication ────────────────────────────────────────────────
 export const communicationApi = {
+  downloadCommentAttachment: (id) => apiClient.get(`/comment-attachments/${id}/`, { responseType: 'blob' }),
+  conversations:     ()         => apiClient.get('/conversations/'),
+  createConversation:(data)     => apiClient.post('/conversations/', data),
+  messages:          (id)       => apiClient.get(`/conversations/${id}/messages/`),
+  sendMessage:       (id, data) => apiClient.post(`/conversations/${id}/messages/`, data, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
+  downloadChatAttachment: (conversationId, attachmentId) => apiClient.get(
+    `/conversations/${conversationId}/attachments/${attachmentId}/`,
+    { responseType: 'blob' },
+  ),
   deleteComment:     (id)       => apiClient.delete(`/comments/${id}/`),
   updateComment:     (id, data) => apiClient.patch(`/comments/${id}/`, data),
   notifications:     ()         => apiClient.get('/notifications/'),

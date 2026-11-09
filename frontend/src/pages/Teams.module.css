@@ -88,7 +88,7 @@
 }
 
 .eyebrow {
-  color: var(--color-moss, #64745f);
+  color: var(--color-text-primary);
   font-size: var(--font-size-xs, 11px);
   font-weight: 700;
   letter-spacing: .09em;
@@ -97,7 +97,7 @@
 
 .title {
   margin: 12px 0 7px;
-  color: var(--color-text-primary, #292c27);
+  color: var(--color-text-primary);
   font-family: var(--font-family, Inter, sans-serif);
   font-size: var(--font-size-2xl, 26px);
   font-weight: 700;
@@ -107,7 +107,7 @@
 
 .subtitle {
   margin: 0;
-  color: var(--color-text-secondary, #555952);
+  color: var(--color-text-secondary);
   font-size: var(--font-size-sm, 13px);
   line-height: 1.6;
 }
@@ -120,10 +120,10 @@
   justify-content: center;
   gap: 8px;
   padding: 0 14px;
-  border: 1px solid var(--color-moss, #64745f);
+  border: 1px solid var(--color-action-border);
   border-radius: 7px;
-  background: var(--color-moss, #64745f);
-  color: #fffdf8;
+  background: var(--color-action-bg);
+  color: var(--color-action-text);
   font: inherit;
   font-size: var(--font-size-sm, 13px);
   font-weight: 600;
@@ -139,7 +139,7 @@
 .createButton:hover,
 .createSubmit:hover:not(:disabled) {
   transform: translateY(-1px);
-  background: var(--color-sage-dark);
+  background: var(--color-action-bg);
 }
 
 .createButton:disabled,
@@ -154,7 +154,7 @@
   align-items: end;
   gap: 15px;
   padding: 20px 0;
-  border-bottom: 1px solid var(--color-border-subtle, #e5e2da);
+  border-bottom: 1px solid var(--color-border-subtle);
 }
 
 .formCopy {
@@ -165,13 +165,13 @@
 }
 
 .formCopy strong {
-  color: var(--color-text-primary, #292c27);
+  color: var(--color-text-primary);
   font-size: 13px;
 }
 
 .formCopy span,
 .teamNameField {
-  color: var(--color-text-secondary, #555952);
+  color: var(--color-text-secondary);
   font-size: 11px;
 }
 
@@ -185,11 +185,11 @@
 .teamNameField input {
   height: 36px;
   padding: 0 10px;
-  border: 1px solid var(--color-border, #d9d5cc);
+  border: 1px solid var(--color-border);
   border-radius: 6px;
   outline: 0;
-  background: var(--color-surface, #fffdf8);
-  color: var(--color-text-primary, #292c27);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
   font: inherit;
   font-weight: 400;
 }
@@ -198,17 +198,17 @@
 .teamNameField select {
   min-height: 38px;
   padding: 8px 10px;
-  border: 1px solid var(--color-border, #d9d5cc);
+  border: 1px solid var(--color-border);
   border-radius: 6px;
   outline: 0;
-  background: var(--color-surface, #fffdf8);
-  color: var(--color-text-primary, #292c27);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
   font: inherit;
   font-weight: 400;
 }
 
 .teamNameField input:focus {
-  border-color: var(--color-moss, #64745f);
+  border-color: var(--color-text-primary);
   box-shadow: 0 0 0 2px rgb(100 116 95 / 12%);
 }
 
@@ -251,7 +251,7 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   margin-top: 0;
-  border-bottom: 1px solid var(--color-border-subtle, #e5e2da);
+  border-bottom: 1px solid var(--color-border-subtle);
 }
 
 .summaryItem {
@@ -259,7 +259,7 @@
   align-items: center;
   gap: 12px;
   padding: 0 20px 20px;
-  border-right: 1px solid var(--color-border-subtle, #e5e2da);
+  border-right: 1px solid var(--color-border-subtle);
 }
 
 .summaryItem:first-child {
@@ -289,12 +289,12 @@
 }
 
 .summaryItem small {
-  color: var(--color-text-tertiary, #737a76);
+  color: var(--color-text-tertiary);
   font-size: 10px;
 }
 
 .summaryItem strong {
-  color: var(--color-text-primary, #292c27);
+  color: var(--color-text-primary);
   font-family: var(--font-family, Inter, sans-serif);
   font-size: var(--font-size-xl, 20px);
   font-weight: 600;
@@ -315,10 +315,10 @@
   align-items: center;
   gap: 8px;
   padding: 0 10px;
-  border: 1px solid var(--color-border, #d9d5cc);
+  border: 1px solid var(--color-border);
   border-radius: 6px;
-  background: var(--color-surface, #fffdf8);
-  color: var(--color-text-tertiary, #737a76);
+  background: var(--color-surface);
+  color: var(--color-text-tertiary);
 }
 
 .searchBox input {
@@ -326,17 +326,17 @@
   border: 0;
   outline: 0;
   background: transparent;
-  color: var(--color-text-primary, #292c27);
+  color: var(--color-text-primary);
   font: inherit;
   font-size: 11px;
 }
 
 .searchBox input::placeholder {
-  color: var(--color-text-tertiary, #737a76);
+  color: var(--color-text-tertiary);
 }
 
 .resultCount {
-  color: var(--color-text-tertiary, #737a76);
+  color: var(--color-text-tertiary);
   font-size: 10px;
 }
 
@@ -348,7 +348,7 @@
 }
 
 .teamList {
-  border-top: 1px solid var(--color-border-subtle, #e5e2da);
+  border-top: 1px solid var(--color-border-subtle);
 }
 
 .state,
@@ -359,17 +359,17 @@
   justify-content: center;
   flex-direction: column;
   gap: 9px;
-  color: var(--color-text-tertiary, #737a76);
+  color: var(--color-text-tertiary);
   text-align: center;
 }
 
 .empty svg {
   margin-bottom: 4px;
-  color: var(--color-moss, #64745f);
+  color: var(--color-text-primary);
 }
 
 .empty strong {
-  color: var(--color-text-primary, #292c27);
+  color: var(--color-text-primary);
   font-family: var(--font-family, Inter, sans-serif);
   font-size: 17px;
   font-weight: 600;
@@ -382,7 +382,7 @@
 
 .teamCard {
   padding: 0 2px;
-  border-bottom: 1px solid var(--color-border-subtle, #e5e2da);
+  border-bottom: 1px solid var(--color-border-subtle);
 }
 
 .teamHeader {
@@ -400,7 +400,7 @@
 }
 
 .teamHeader:hover .teamInfo strong {
-  color: var(--color-moss, #64745f);
+  color: var(--color-text-primary);
 }
 
 .teamMark {
@@ -423,7 +423,7 @@
 
 .teamInfo strong {
   overflow: hidden;
-  color: var(--color-text-primary, #292c27);
+  color: var(--color-text-primary);
   font-family: var(--font-family, Inter, sans-serif);
   font-size: var(--font-size-md, 15px);
   font-weight: 600;
@@ -433,7 +433,7 @@
 }
 
 .teamInfo small {
-  color: var(--color-text-tertiary, #737a76);
+  color: var(--color-text-tertiary);
   font-size: 10px;
 }
 
@@ -446,7 +446,7 @@
 
 .cardMemberPreview > small {
   margin-left: 9px;
-  color: var(--color-text-tertiary, #737a76);
+  color: var(--color-text-tertiary);
   font-size: 9px;
 }
 
@@ -476,7 +476,7 @@
   flex: 0 0 auto;
   place-items: center;
   border-radius: 50%;
-  color: var(--color-text-tertiary, #737a76);
+  color: var(--color-text-tertiary);
 }
 
 .teamStats {
@@ -494,13 +494,13 @@
 }
 
 .teamStats span {
-  color: var(--color-text-tertiary, #737a76);
+  color: var(--color-text-tertiary);
   font-size: 9px;
 }
 
 .teamStats strong {
   overflow: hidden;
-  color: var(--color-text-secondary, #555952);
+  color: var(--color-text-secondary);
   font-size: 10px;
   font-weight: 600;
   text-overflow: ellipsis;
@@ -510,7 +510,7 @@
 .membersPanel {
   margin: 0 0 16px 56px;
   padding: 14px 16px;
-  border: 1px solid var(--color-border-subtle, #e5e2da);
+  border: 1px solid var(--color-border-subtle);
   border-radius: 8px;
   background: rgb(255 253 248 / 60%);
 }
@@ -521,17 +521,17 @@
   justify-content: space-between;
   gap: 12px;
   padding-bottom: 10px;
-  border-bottom: 1px solid var(--color-border-subtle, #e5e2da);
+  border-bottom: 1px solid var(--color-border-subtle);
 }
 
 .panelHeading strong {
-  color: var(--color-text-primary, #292c27);
+  color: var(--color-text-primary);
   font-size: 11px;
 }
 
 .panelHeading span,
 .memberMessage {
-  color: var(--color-text-tertiary, #737a76);
+  color: var(--color-text-tertiary);
   font-size: 9px;
 }
 
@@ -581,7 +581,7 @@
 
 .memberIdentity strong {
   overflow: hidden;
-  color: var(--color-text-primary, #292c27);
+  color: var(--color-text-primary);
   font-size: 10px;
   font-weight: 600;
   text-overflow: ellipsis;
@@ -590,7 +590,7 @@
 
 .memberIdentity small {
   overflow: hidden;
-  color: var(--color-text-tertiary, #737a76);
+  color: var(--color-text-tertiary);
   font-size: 9px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -614,13 +614,13 @@
   max-width: 380px;
   margin-top: 12px;
   padding-top: 10px;
-  border-top: 1px solid var(--color-border-subtle, #e5e2da);
+  border-top: 1px solid var(--color-border-subtle);
 }
 
 .workloadHeading {
   display: block;
   margin-bottom: 5px;
-  color: var(--color-text-tertiary, #737a76);
+  color: var(--color-text-tertiary);
   font-size: 9px;
   font-weight: 600;
 }
@@ -630,12 +630,12 @@
   justify-content: space-between;
   gap: 12px;
   padding: 5px 0;
-  color: var(--color-text-secondary, #555952);
+  color: var(--color-text-secondary);
   font-size: 9px;
 }
 
 .workloadRow strong {
-  color: var(--color-moss, #64745f);
+  color: var(--color-text-primary);
   font-size: 9px;
 }
 
@@ -775,13 +775,13 @@
   background: transparent;
   transition: background var(--transition-fast);
 }
-.teamHeader:hover { background: rgba(238, 234, 225, 0.2); }
+.teamHeader:hover { background: var(--color-surface); }
 .teamStats { background: transparent; }
 .membersPanel {
   border: 0;
   border-left: 1px solid var(--color-border-subtle);
   border-radius: 0;
-  background: rgba(238, 234, 225, 0.12);
+  background: var(--color-surface);
 }
 .teamStats { color: var(--color-text-secondary); }
 .empty {
@@ -891,7 +891,7 @@
   padding: 10px 12px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-base);
-  background: rgba(255, 253, 248, 0.7);
+  background: var(--color-surface);
   color: var(--color-text-primary);
   font: inherit;
   font-size: var(--font-size-sm);
@@ -943,6 +943,18 @@
   padding: 0 16px;
   border-radius: var(--radius-base);
   font-size: var(--font-size-sm);
+}
+
+:global([data-theme="dark"]) .membersPanel,
+:global([data-theme="dark"]) .teamHeader:hover,
+:global([data-theme="dark"]) .createModal .teamNameField input,
+:global([data-theme="dark"]) .createModal .teamNameField textarea {
+  background: var(--color-surface);
+}
+
+:global([data-theme="dark"]) .membersPanel,
+:global([data-theme="dark"]) .teamHeader {
+  border-color: var(--color-border);
 }
 
 @media (max-width: 620px) {

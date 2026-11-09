@@ -75,7 +75,7 @@
   padding: var(--space-4) var(--space-5);
   border-top: 1px solid var(--color-border);
   border-bottom: 1px solid var(--color-border);
-  background: rgba(255, 253, 248, 0.55);
+  background: var(--color-surface);
 }
 
 .overviewHeading {
@@ -188,7 +188,7 @@
 
 .projectRow:hover {
   padding-inline: var(--space-3);
-  background: rgba(255, 253, 248, 0.72);
+  background: var(--color-surface);
 }
 
 .projectMark {
@@ -284,7 +284,7 @@
   min-height: 164px;
   padding: var(--space-6) var(--space-7);
   border: 0;
-  background: rgba(240, 229, 221, 0.28);
+  background: var(--color-surface);
 }
 
 .bannerArt { opacity: .82; }
@@ -292,7 +292,7 @@
   border-top: 1px solid var(--color-border-subtle);
   border-bottom: 1px solid var(--color-border-subtle);
   border-radius: 0;
-  background: rgba(255, 253, 248, 0.32);
+  background: var(--color-surface);
   box-shadow: none;
 }
 
@@ -315,12 +315,25 @@
   background: var(--color-surface-raised);
 }
 
+:global([data-theme="dark"]) .welcomeBanner,
+:global([data-theme="dark"]) .overview,
+:global([data-theme="dark"]) .metric,
+:global([data-theme="dark"]) .projectRow:hover,
+:global([data-theme="dark"]) .sectionEmpty {
+  background: var(--color-surface);
+}
+
+:global([data-theme="dark"]) .welcomeBanner,
+:global([data-theme="dark"]) .sectionEmpty {
+  border-bottom: 1px solid var(--color-border);
+}
+
 .sectionEmpty {
   min-height: 84px;
   padding: var(--space-4);
   border: 0;
   border-radius: 0;
-  background: rgba(238, 234, 225, 0.2);
+  background: var(--color-surface);
 }
 
 .lowerGrid { gap: var(--space-6); }

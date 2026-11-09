@@ -107,7 +107,7 @@
 .toggleRow small { color: var(--color-text-tertiary); font-size: 10px; }
 .toggleRow input { position: relative; width: 34px; height: 19px; flex: 0 0 auto; appearance: none; border: 1px solid var(--color-border); border-radius: 99px; background: var(--color-surface-raised); cursor: pointer; transition: background .15s ease, border-color .15s ease; }
 .toggleRow input::before { position: absolute; top: 2px; left: 2px; width: 13px; height: 13px; border-radius: 50%; background: var(--color-surface); box-shadow: 0 1px 2px rgb(0 0 0 / 15%); content: ''; transition: transform .15s ease; }
-.toggleRow input:checked { border-color: var(--color-sage-dark); background: var(--color-sage-dark); }
+.toggleRow input:checked { border-color: var(--color-action-border); background: var(--color-action-bg); }
 .toggleRow input:checked::before { transform: translateX(15px); }
 .toggleRow input:focus-visible { outline: 2px solid var(--color-sage); outline-offset: 2px; }
 
@@ -119,7 +119,7 @@
 
 .primaryButton,
 .secondaryButton { display: inline-flex; width: fit-content; min-height: 34px; align-items: center; justify-content: center; gap: 7px; padding: 0 11px; border: 1px solid var(--color-border); border-radius: var(--radius-base); background: var(--color-surface); color: var(--color-text-primary); font: inherit; font-size: var(--font-size-xs); font-weight: 600; text-decoration: none; cursor: pointer; }
-.primaryButton { border-color: var(--color-sage-dark); background: var(--color-sage-dark); color: var(--color-surface); }
+.primaryButton { border-color: var(--color-action-border); background: var(--color-action-bg); color: var(--color-action-text); }
 .primaryButton:hover { background: var(--color-sage-hover); }
 .primaryButton:disabled { opacity: .65; cursor: wait; }
 .secondaryButton:hover { background: var(--color-bg); }
@@ -274,8 +274,8 @@
   height: 27px;
   place-items: center;
   border-radius: 7px;
-  background: var(--color-sage-dark);
-  color: var(--color-surface);
+  background: var(--color-action-bg);
+  color: var(--color-action-text);
   font-size: 12px;
   font-weight: 700;
 }

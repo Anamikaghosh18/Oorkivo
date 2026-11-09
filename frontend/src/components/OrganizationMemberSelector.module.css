@@ -86,7 +86,7 @@
 .inviteSuccess { color: var(--color-sage-dark); }
 .inviteActions { display: flex; grid-column: 1 / -1; justify-content: flex-end; gap: 7px; }
 .inviteActions button { min-height: 31px; padding: 0 10px; border: 1px solid var(--color-border); border-radius: 5px; background: var(--color-surface); color: var(--color-text-secondary); font: inherit; font-size: var(--font-size-xs); cursor: pointer; }
-.inviteActions button[type="submit"] { border-color: var(--color-sage); background: var(--color-sage); color: white; }
+.inviteActions button[type="submit"] { border: 1px solid var(--color-action-border); background: var(--color-action-bg); color: var(--color-action-text); }
 .inviteActions button:disabled { opacity: .6; cursor: not-allowed; }
 
 @container (max-width: 360px) {

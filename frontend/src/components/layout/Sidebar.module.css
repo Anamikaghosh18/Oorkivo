@@ -10,7 +10,7 @@
   z-index: 100;
   border-right: 1px solid var(--color-sidebar-border);
   transition: width var(--transition-base);
-  overflow: hidden;
+  overflow: visible;
   box-shadow: 2px 0 12px rgba(0, 0, 0, 0.1);
 }
 
@@ -30,7 +30,8 @@
 .logoMark {
   width: 30px;
   height: 30px;
-  background: var(--color-sage);
+  background: var(--color-sidebar-active);
+  color: var(--color-sidebar-text);
   border: 1px solid rgba(255,255,255,0.18);
   border-radius: var(--radius-base);
   display: flex;
@@ -99,12 +100,12 @@
 
 .navItem:hover {
   background: rgba(217, 221, 212, 0.08);
-  color: #FFFDF8;
+  color: var(--color-sidebar-text);
 }
 
 .navItemActive {
   background: var(--color-sidebar-active);
-  color: #FFFDF8;
+  color: var(--color-sidebar-text);
   font-weight: 600;
 }
 
@@ -115,15 +116,15 @@
   top: 15%;
   bottom: 15%;
   width: 3px;
-  background: var(--color-sage-light);
+  background: var(--color-sidebar-text);
   border-radius: 0 3px 3px 0;
 }
 
+.navItem .navIcon,
 .navItemActive .navIcon {
-  color: var(--color-sage-light);
+  flex-shrink: 0;
+  color: var(--color-sidebar-text);
 }
-
-.navIcon { flex-shrink: 0; }
 
 .navLabel {
   overflow: hidden;
@@ -148,18 +149,18 @@
 /* ── Collapse toggle ────────────────────────────────────────── */
 .toggleBtn {
   position: absolute;
-  right: -11px;
+  right: -11.5px;
   top: 50%;
   transform: translateY(-50%);
   width: 22px;
   height: 22px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  background: var(--color-sidebar-bg);
+  border: 1px solid var(--color-sidebar-border);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-text-secondary);
+  color: var(--color-sidebar-text);
   cursor: pointer;
   transition: background var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
   z-index: 10;
@@ -167,9 +168,9 @@
 }
 
 .toggleBtn:hover {
-  background: var(--color-sage-light);
-  color: var(--color-sage-dark);
-  border-color: var(--color-sage-mid);
+  background: var(--color-sidebar-active);
+  color: var(--color-sidebar-text);
+  border-color: var(--color-sidebar-muted);
 }
 
 .toggleIcon { transition: transform var(--transition-base); }

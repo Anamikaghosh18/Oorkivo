@@ -1,9 +1,11 @@
 import { NavLink } from 'react-router-dom';
 import {
+  MessagesSquare,
   Settings,
   ChevronLeft,
 } from 'lucide-react';
 import FeatureIcon from '../visual/FeatureIcon';
+import BrandMark from '../visual/BrandMark';
 import styles from './Sidebar.module.css';
 
 const NAV_PRIMARY = [
@@ -11,6 +13,7 @@ const NAV_PRIMARY = [
   { to: '/teams',     feature: 'teams',     label: 'Teams' },
   { to: '/projects',  feature: 'projects',  label: 'Projects' },
   { to: '/tasks',     feature: 'tasks',     label: 'Tasks' },
+  { to: '/chat',      icon: MessagesSquare, label: 'Chat' },
 ];
 
 const NAV_SECONDARY = [
@@ -42,12 +45,7 @@ export default function Sidebar({ collapsed, onToggle }) {
       {/* ── Brand ─────────────────────────── */}
       <div className={styles.brand}>
         <div className={styles.logoMark}>
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <rect width="7" height="7" rx="1.5" fill="white" fillOpacity="0.9"/>
-            <rect x="9" width="7" height="7" rx="1.5" fill="white" fillOpacity="0.55"/>
-            <rect y="9" width="7" height="7" rx="1.5" fill="white" fillOpacity="0.55"/>
-            <rect x="9" y="9" width="7" height="7" rx="1.5" fill="white" fillOpacity="0.3"/>
-          </svg>
+          <BrandMark size={16} />
         </div>
         {!collapsed && (
           <div className={styles.brandText}>

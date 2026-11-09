@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
+import BrandMark from '../visual/BrandMark';
 import { authApi } from '../../services/api';
 import styles from './OverlayDetailShell.module.css';
 
@@ -47,7 +48,7 @@ export default function OverlayDetailShell({
       <section className={`${styles.surface} ${wide ? styles.surfaceWide : ''}`} role="dialog" aria-modal="true" aria-label={ariaLabel}>
         <header className={styles.topbar}>
           <button type="button" className={styles.brand} onClick={onClose}>
-            <span className={styles.logo} aria-hidden="true">O</span>
+            <span className={styles.logo}><BrandMark size={14} /></span>
             <span>Oorkivo</span>
           </button>
           {centerTitle ? <span className={styles.centerTitle}>{centerTitle}</span> : <span aria-hidden="true" />}

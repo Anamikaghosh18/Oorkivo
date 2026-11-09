@@ -1,4 +1,5 @@
 import styles from './AuthLayout.module.css';
+import BrandMark from '../visual/BrandMark';
 import { ArrowUpRight, Check, Circle, LayoutDashboard, MoreHorizontal, Plus, UsersRound } from 'lucide-react';
 
 export function GoogleIcon() {
@@ -70,12 +71,7 @@ export default function AuthLayout({ children, title, subtitle, variant }) {
         <div className={styles.visualContent}>
           <div className={styles.brand}>
             <div className={styles.logoMark}>
-              <svg width="20" height="20" viewBox="0 0 16 16" fill="none">
-                <rect width="7" height="7" rx="1.5" fill="white" fillOpacity="0.9"/>
-                <rect x="9" width="7" height="7" rx="1.5" fill="white" fillOpacity="0.55"/>
-                <rect y="9" width="7" height="7" rx="1.5" fill="white" fillOpacity="0.55"/>
-                <rect x="9" y="9" width="7" height="7" rx="1.5" fill="white" fillOpacity="0.3"/>
-              </svg>
+              <BrandMark size={20} />
             </div>
             <span className={styles.brandName}>Oorkivo</span>
           </div>
@@ -138,12 +134,7 @@ export default function AuthLayout({ children, title, subtitle, variant }) {
           {/* Mobile brand (hidden on desktop) */}
           <div className={styles.mobileBrand}>
             <div className={styles.logoMarkMobile}>
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <rect width="7" height="7" rx="1.5" fill="white" fillOpacity="0.9"/>
-                <rect x="9" width="7" height="7" rx="1.5" fill="white" fillOpacity="0.55"/>
-                <rect y="9" width="7" height="7" rx="1.5" fill="white" fillOpacity="0.55"/>
-                <rect x="9" y="9" width="7" height="7" rx="1.5" fill="white" fillOpacity="0.3"/>
-              </svg>
+              <BrandMark size={16} />
             </div>
             <span>Oorkivo</span>
           </div>

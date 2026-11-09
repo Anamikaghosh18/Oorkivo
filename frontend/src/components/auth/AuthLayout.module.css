@@ -194,7 +194,7 @@
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, .3);
   border-radius: 12px;
-  background: #FFFDF8;
+  background: var(--color-surface);
   box-shadow: 0 24px 70px rgba(0, 0, 0, .22);
   color: #292C27;
   transform: rotate(-1deg);
@@ -206,7 +206,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 0 13px;
-  border-bottom: 1px solid #EAE7DF;
+  border-bottom: 1px solid var(--color-border);
   color: #85877F;
   font-size: 9px;
 }
@@ -223,9 +223,9 @@
   background: #D9D5CC;
 }
 
-.showcaseWindowDots i:first-child { background: #A76561; }
-.showcaseWindowDots i:nth-child(2) { background: #B58A52; }
-.showcaseWindowDots i:nth-child(3) { background: #899583; }
+.showcaseWindowDots i:first-child,
+.showcaseWindowDots i:nth-child(2),
+.showcaseWindowDots i:nth-child(3) { background: var(--color-text-tertiary); }
 
 .showcaseBody {
   display: grid;
@@ -239,8 +239,8 @@
   flex-direction: column;
   gap: 13px;
   padding: 12px 0;
-  border-right: 1px solid #EAE7DF;
-  background: #F8F6F0;
+  border-right: 1px solid var(--color-border);
+  background: var(--color-surface);
 }
 
 .showcaseWorkspaceMark {
@@ -267,13 +267,14 @@
 }
 
 .showcaseNavActive {
-  background: #E9EDE7;
-  color: #536451;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
 }
 
 .showcaseAdd {
   margin-top: auto;
-  border: 1px solid #E5E2DA;
+  border: 1px solid var(--color-border);
   color: #73766F;
 }
 
@@ -323,7 +324,7 @@
   justify-content: center;
   gap: 4px;
   padding: 7px 9px;
-  border: 1px solid #EAE7DF;
+  border: 1px solid var(--color-border);
   border-radius: 6px;
 }
 
@@ -365,7 +366,7 @@
   min-height: 42px;
   align-items: center;
   gap: 9px;
-  border-top: 1px solid #F0EEE8;
+  border-top: 1px solid var(--color-border);
 }
 
 .showcaseTask > span:nth-child(2) {
@@ -419,7 +420,7 @@
   gap: 8px;
   margin-top: 6px;
   padding-top: 8px;
-  border-top: 1px solid #F0EEE8;
+  border-top: 1px solid var(--color-border);
   color: #85877F;
   font-size: 8px;
 }
@@ -435,17 +436,17 @@
   height: 17px;
   place-items: center;
   margin-left: -2px;
-  border: 1px solid #FFFDF8;
+  border: 1px solid var(--color-border);
   border-radius: 50%;
-  background: #E8EEF0;
-  color: #536451;
+  background: var(--color-surface);
+  color: var(--color-text-primary);
   font-size: 7px;
   font-style: normal;
   font-weight: 700;
 }
 
-.showcaseAvatars i:nth-child(2) { background: #F0E5DD; color: #A9826B; }
-.showcaseAvatars i:nth-child(3) { background: #EEE7EB; color: #806B78; }
+.showcaseAvatars i:nth-child(2),
+.showcaseAvatars i:nth-child(3) { background: var(--color-surface); color: var(--color-text-primary); }
 
 .onboardingFootnote {
   display: flex;
@@ -484,10 +485,49 @@
 }
 
 .authVisual {
-  background:
-    radial-gradient(ellipse at 78% 14%, rgba(137, 149, 131, .23), transparent 35%),
-    #292C27;
+  background: var(--color-sidebar-bg);
   padding: clamp(30px, 4vw, 54px);
+}
+
+.authVisual .logoMark,
+.authForm .logoMarkMobile {
+  background: var(--color-action-hover);
+  color: var(--color-action-text);
+}
+
+.authVisual .showcaseSidebar {
+  border-color: var(--color-border);
+  background: var(--color-surface);
+}
+
+.authVisual .showcaseWorkspaceMark {
+  background: var(--color-action-bg);
+}
+
+.authVisual .showcaseNav,
+.authVisual .showcaseNavActive,
+.authVisual .showcaseAdd,
+.authVisual .showcaseMetrics strong,
+.authVisual .showcaseSectionTitle span + span,
+.authVisual .showcaseCheck,
+.authVisual .showcaseCircle {
+  color: var(--color-action-bg);
+}
+
+.authVisual .showcaseNavActive {
+  background: transparent;
+}
+
+.authVisual .showcasePriority,
+.authVisual .showcaseReview {
+  background: var(--color-action-bg);
+}
+
+.authVisual .showcaseAvatars i,
+.authVisual .showcaseAvatars i:nth-child(2),
+.authVisual .showcaseAvatars i:nth-child(3) {
+  background: var(--color-surface-raised);
+  color: var(--color-action-bg);
 }
 
 .authVisual .visualContent {

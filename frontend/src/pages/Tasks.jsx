@@ -22,6 +22,7 @@ import {
 import AppShell from '../components/layout/AppShell';
 import Avatar from '../components/Avatar';
 import DropdownSelect from '../components/DropdownSelect';
+import TimelineGanttView from '../components/timeline/TimelineGanttView';
 import FeatureIcon from '../components/visual/FeatureIcon';
 import OrganizationMemberSelector from '../components/OrganizationMemberSelector';
 import { useDashboard } from '../hooks/useDashboard';
@@ -812,6 +813,7 @@ export default function Tasks() {
     <div className={styles.viewToggle} aria-label="Task layout">
       <button type="button" className={layoutView === 'LIST' ? styles.viewActive : ''} onClick={() => setLayoutView('LIST')} aria-pressed={layoutView === 'LIST'}><Rows3 size={14} /> List</button>
       <button type="button" className={layoutView === 'BOARD' ? styles.viewActive : ''} onClick={() => setLayoutView('BOARD')} aria-pressed={layoutView === 'BOARD'}><Columns3 size={14} /> Board</button>
+      <button type="button" className={layoutView === 'TIMELINE' ? styles.viewActive : ''} onClick={() => setLayoutView('TIMELINE')} aria-pressed={layoutView === 'TIMELINE'}><CalendarDays size={14} /> Timeline</button>
     </div>
   );
 
@@ -883,7 +885,9 @@ export default function Tasks() {
           </details>
         )}
         {loading ? <div className={styles.stateMessage}>Loading tasks…</div> : visibleMyTasks.length
-          ? layoutView === 'BOARD'
+          ? layoutView === 'TIMELINE'
+            ? <TimelineGanttView tasks={visibleMyTasks} sprints={sprints} onTaskClick={(task) => navigate(`/tasks/${task.id}`, { state: taskLinkState })} />
+            : layoutView === 'BOARD'
             ? renderBoard(visibleMyTasks)
             : myWorkFilter === 'ACTIVE' && !search.trim() && statusFilter === 'ALL' && priorityFilter === 'ALL' && projectFilter === 'ALL' && sprintFilter === 'ALL' && assigneeFilter === 'ALL' && dueFilter === 'ALL'
               ? <div className={styles.workGroups}>{nonEmptyGroups.map((group) => (
@@ -1036,7 +1040,9 @@ export default function Tasks() {
           <DropdownSelect variant="compact" prefix="Sort" value={backlogSort} ariaLabel="Sort backlog tasks" options={[{ value: 'PRIORITY', label: 'Priority' }, { value: 'DUE_DATE', label: 'Due date' }, { value: 'TITLE', label: 'Title' }]} onChange={setBacklogSort} />
           {renderLayoutToggle()}
         </div>
-        {loading ? <div className={styles.stateMessage}>Loading backlog…</div> : backlogTasks.length ? layoutView === 'BOARD'
+        {loading ? <div className={styles.stateMessage}>Loading backlog…</div> : backlogTasks.length ? layoutView === 'TIMELINE'
+          ? <TimelineGanttView tasks={backlogTasks} sprints={sprints} onTaskClick={(task) => navigate(/tasks/, { state: taskLinkState })} />
+          : layoutView === 'BOARD'
           ? renderBoard(backlogTasks, true)
           : (
           <div className={styles.backlogGroups}>
@@ -1096,7 +1102,9 @@ export default function Tasks() {
           <div className={styles.workspaceActions}>{renderLayoutToggle()}</div>
           {sprintActionError && <p className={styles.error} role="alert">{sprintActionError}</p>}
           {selectedSprintTasks.length
-            ? layoutView === 'BOARD'
+            ? layoutView === 'TIMELINE'
+            ? <TimelineGanttView tasks={selectedSprintTasks} sprints={[selectedSprint]} onTaskClick={(task) => navigate(`/tasks/${task.id}`, { state: taskLinkState })} />
+            : layoutView === 'BOARD'
               ? renderBoard(selectedSprintTasks, false, true)
               : renderList(selectedSprintTasks, true)
             : <EmptyState title="No tasks in this sprint" detail="Move work here from the backlog when it is ready." />}

@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { Link, NavLink, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Bell, Building2, Camera, Check, LockKeyhole, MoreHorizontal, Pencil, Settings as SettingsIcon, ShieldCheck, Trash2, UserRound, Users, X, ArrowUpRight } from 'lucide-react';
 import Avatar from '../components/Avatar';
+import BrandMark from '../components/visual/BrandMark';
 import { useAuth } from '../hooks/useAuth';
 import { authApi, organizationsApi } from '../services/api';
 import styles from './Settings.module.css';
@@ -622,7 +623,7 @@ export default function Settings() {
     <section className={styles.settingsSurface} role="dialog" aria-modal="true" aria-label="Settings">
       <header className={styles.settingsTopbar}>
         <Link to={hasBackground ? location.state.backgroundLocation.pathname : '/dashboard'} className={styles.settingsBrand}>
-          <span className={styles.settingsLogo} aria-hidden="true">O</span>
+          <span className={styles.settingsLogo}><BrandMark size={14} /></span>
           <span>Oorkivo</span>
         </Link>
         <span className={styles.settingsTopbarTitle}>App settings</span>

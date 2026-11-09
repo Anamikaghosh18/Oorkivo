@@ -1,12 +1,16 @@
 from django.db import models
 from django.conf import settings
+from django.core.validators import FileExtensionValidator
 from tasks.models import Task
 from projects.models import Project
+from organizations.models import Organization
+from teams.models import Team
+import os
 
 class TaskComment(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='comments')
     author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='task_comments')
-    content = models.TextField()
+    content = models.TextField(blank=True)
     mentions = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name='task_mentions')
     
     created_at = models.DateTimeField(auto_now_add=True)
@@ -17,6 +21,39 @@ class TaskComment(models.Model):
 
     def __str__(self):
         return f"Comment by {self.author} on {self.task}"
+
+
+def task_comment_attachment_upload_path(instance, filename):
+    task = instance.comment.task
+    return os.path.join(
+        'task-comment-attachments',
+        str(task.project_id),
+        str(task.id),
+        str(instance.comment_id),
+        filename,
+    )
+
+
+class TaskCommentAttachment(models.Model):
+    comment = models.ForeignKey(
+        TaskComment, on_delete=models.CASCADE, related_name='attachments'
+    )
+    file = models.FileField(
+        upload_to=task_comment_attachment_upload_path,
+        validators=[FileExtensionValidator(
+            allowed_extensions=[
+                'pdf', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'txt', 'csv',
+                'doc', 'docx', 'xls', 'xlsx', 'zip',
+            ]
+        )],
+    )
+    filename = models.CharField(max_length=255)
+    file_size = models.PositiveBigIntegerField()
+    content_type = models.CharField(max_length=150)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at', 'id']
 
 class ProjectComment(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='comments')
@@ -87,6 +124,7 @@ class Notification(models.Model):
         TASK_DUE = 'TASK_DUE', 'Task due'
         TASK_OVERDUE = 'TASK_OVERDUE', 'Task overdue'
         MEMBER_RECOGNIZED = 'MEMBER_RECOGNIZED', 'Member recognized'
+        CHAT_MENTIONED = 'CHAT_MENTIONED', 'Mentioned in chat'
 
     recipient = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='notifications')
     actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='triggered_notifications')
@@ -103,6 +141,10 @@ class Notification(models.Model):
         'organizations.Organization', on_delete=models.CASCADE, null=True, blank=True,
         related_name='notifications',
     )
+    conversation = models.ForeignKey(
+        'ChatConversation', on_delete=models.CASCADE, null=True, blank=True,
+        related_name='notifications',
+    )
     dedupe_key = models.CharField(max_length=255, unique=True, null=True, blank=True)
     
     is_read = models.BooleanField(default=False)
@@ -110,3 +152,101 @@ class Notification(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+
+
+def chat_attachment_upload_path(instance, filename):
+    return os.path.join(
+        'chat-attachments',
+        str(instance.message.conversation.organization_id),
+        str(instance.message.conversation_id),
+        str(instance.message_id),
+        filename,
+    )
+
+
+class ChatConversation(models.Model):
+    organization = models.ForeignKey(
+        Organization, on_delete=models.CASCADE, related_name='chat_conversations'
+    )
+    project = models.ForeignKey(
+        Project, on_delete=models.CASCADE, null=True, blank=True,
+        related_name='chat_conversations',
+    )
+    team = models.ForeignKey(
+        Team, on_delete=models.CASCADE, null=True, blank=True,
+        related_name='chat_conversations',
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='created_chat_conversations'
+    )
+    title = models.CharField(max_length=120, blank=True)
+    is_group = models.BooleanField(default=False)
+    members = models.ManyToManyField(
+        settings.AUTH_USER_MODEL, through='ChatParticipant', related_name='chat_conversations'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-updated_at', '-id']
+
+    def __str__(self):
+        return self.title or f'Chat {self.pk}'
+
+
+class ChatParticipant(models.Model):
+    conversation = models.ForeignKey(
+        ChatConversation, on_delete=models.CASCADE, related_name='participants'
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='chat_participations'
+    )
+    joined_at = models.DateTimeField(auto_now_add=True)
+    last_read_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['conversation', 'user'], name='unique_chat_participant'
+            ),
+        ]
+
+
+class ChatMessage(models.Model):
+    conversation = models.ForeignKey(
+        ChatConversation, on_delete=models.CASCADE, related_name='messages'
+    )
+    sender = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='chat_messages'
+    )
+    content = models.TextField(blank=True)
+    mentions = models.ManyToManyField(
+        settings.AUTH_USER_MODEL, blank=True, related_name='chat_mentions'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['created_at', 'id']
+
+
+class ChatAttachment(models.Model):
+    message = models.ForeignKey(
+        ChatMessage, on_delete=models.CASCADE, related_name='attachments'
+    )
+    file = models.FileField(
+        upload_to=chat_attachment_upload_path,
+        validators=[FileExtensionValidator(
+            allowed_extensions=[
+                'pdf', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'txt', 'csv',
+                'doc', 'docx', 'xls', 'xlsx', 'zip',
+            ]
+        )],
+    )
+    filename = models.CharField(max_length=255)
+    file_size = models.PositiveBigIntegerField()
+    content_type = models.CharField(max_length=150)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at', 'id']

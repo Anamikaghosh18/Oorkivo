@@ -70,7 +70,7 @@
   border: 0;
   border-left: 1px solid var(--color-border-subtle);
   border-radius: 0;
-  background: rgba(255, 253, 248, 0.28);
+  background: var(--color-surface);
 }
 
 .metric:first-child { border-left: 0; }
@@ -131,7 +131,8 @@
 }
 
 .viewToggle .viewActive {
-  background: #e9ece5;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
   color: var(--color-sage-dark);
 }
 
@@ -152,7 +153,13 @@
 }
 
 .workFilters button:hover {
-  background: rgba(100, 116, 95, 0.07);
+  border-color: var(--color-border);
+  background: var(--color-surface);
+}
+
+:global([data-theme="dark"]) .workFilters button:hover {
+  border-color: var(--color-border);
+  background: var(--color-surface);
 }
 
 .workFilters .workFilterActive {
@@ -271,7 +278,7 @@
   padding: var(--space-3);
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-md);
-  background: rgba(255, 253, 248, 0.56);
+  background: var(--color-surface);
 }
 
 .boardColumn h2 {
@@ -665,10 +672,10 @@ a.row:hover {
   justify-content: center;
   gap: 7px;
   padding: 0 13px;
-  border: 1px solid var(--color-sage-dark);
+  border: 1px solid var(--color-action-border);
   border-radius: var(--radius-base);
-  background: var(--color-sage-dark);
-  color: #fffdf8;
+  background: var(--color-action-bg);
+  color: var(--color-action-text);
   font: inherit;
   font-size: var(--font-size-sm);
   font-weight: 600;
@@ -677,7 +684,7 @@ a.row:hover {
 
 .newTaskButton:hover,
 .secondaryAction:hover {
-  background: #4f5d4c;
+  background: var(--color-action-hover);
 }
 
 .newTaskButton:disabled {
@@ -722,7 +729,7 @@ a.row:hover {
   bottom: -1px;
   left: 10px;
   height: 2px;
-  background: var(--color-sage-dark);
+  background: var(--color-action-bg);
   content: '';
 }
 
@@ -886,13 +893,13 @@ a.row:hover {
 
 .statusLabel.inProgress { color: var(--color-status-progress); }
 .statusLabel.inProgress::before,
-.columnDot.inProgress { background: var(--color-sage-dark); }
+.columnDot.inProgress { background: var(--color-status-progress); }
 .statusLabel.inReview { color: var(--color-status-review); }
 .statusLabel.inReview::before,
 .columnDot.inReview { background: var(--color-amber); }
 .statusLabel.completed { color: var(--color-status-done); }
 .statusLabel.completed::before,
-.columnDot.completed { background: var(--color-sage-dark); }
+.columnDot.completed { background: var(--color-status-done); }
 .statusLabel.blocked { color: var(--color-status-blocked); }
 .statusLabel.blocked::before,
 .columnDot.blocked { background: var(--color-danger); }
@@ -1108,7 +1115,7 @@ a.row:hover {
 .listPanel { overflow: visible; border-top: 1px solid var(--color-border); border-bottom: 1px solid var(--color-border); background: transparent; }
 .listRow { display: grid; grid-template-columns: minmax(230px, 2fr) minmax(120px, 0.9fr) minmax(100px, 0.7fr) minmax(120px, 0.8fr); align-items: center; gap: 12px; min-height: 52px; padding: 7px 12px; border-bottom: 1px solid var(--color-border-subtle); }
 .listRow:last-child { border-bottom: 0; }
-.listHeader { min-height: 37px; background: rgba(248, 246, 240, 0.68); color: var(--color-text-tertiary); font-size: 10px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; }
+.listHeader { min-height: 37px; background: var(--color-surface); color: var(--color-text-tertiary); font-size: 10px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; }
 .listTask { display: flex; min-width: 0; align-items: center; gap: 10px; }
 .listTask > svg { flex: 0 0 auto; color: var(--color-sage); }
 .listTask > div { display: flex; min-width: 0; flex-direction: column; gap: 3px; }
@@ -1290,19 +1297,19 @@ a.row:hover {
   padding: var(--space-3);
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-md);
-  background: rgba(238, 234, 225, 0.48);
+  background: var(--color-surface);
 }
 
 .filterControls {
   border-radius: var(--radius-md);
-  background: rgba(255, 253, 248, 0.58);
+  background: var(--color-surface);
 }
 
 .workFilters {
   padding: 4px;
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-md);
-  background: rgba(238, 234, 225, 0.48);
+  background: var(--color-surface);
 }
 
 .workFilters .workFilterActive { box-shadow: var(--shadow-xs); }
@@ -1313,12 +1320,12 @@ a.row:hover {
   border: 0;
   border-bottom: 1px solid var(--color-border-subtle);
   border-radius: 0;
-  background: rgba(255, 253, 248, 0.18);
+  background: var(--color-surface);
 }
 
 .workGroup h3 { padding-bottom: var(--space-2); }
 .workRow { border-bottom-color: var(--color-border-subtle); }
-.workRow:hover { background: rgba(238, 234, 225, 0.42); }
+.workRow:hover { background: var(--color-surface); }
 
 .listPanel {
   border-color: var(--color-border-subtle);
@@ -1327,9 +1334,9 @@ a.row:hover {
 }
 
 .listRow { border-bottom-color: var(--color-border-subtle); }
-.listHeader { background: var(--color-surface-raised); }
-.listRow:not(.listHeader):hover { background: rgba(238, 234, 225, 0.48); }
-.boardColumn { background: rgba(238, 234, 225, 0.48); }
+.listHeader { background: var(--color-surface); }
+.listRow:not(.listHeader):hover { background: var(--color-surface); }
+.boardColumn { background: var(--color-surface); }
 .boardTask { box-shadow: 0 1px 2px rgba(41, 44, 39, 0.035); }
 
 .taskDrawer { box-shadow: var(--shadow-lg); }
@@ -1341,5 +1348,29 @@ a.row:hover {
   .empty {
     border: 1px dashed var(--color-border);
     border-radius: var(--radius-base);
-    background: rgba(238, 234, 225, 0.4);
+    background: var(--color-surface);
   }
+
+:global([data-theme="dark"]) .toolbar,
+:global([data-theme="dark"]) .filterControls,
+:global([data-theme="dark"]) .workFilters,
+:global([data-theme="dark"]) .workGroup,
+:global([data-theme="dark"]) .workRow:hover,
+:global([data-theme="dark"]) .listHeader,
+:global([data-theme="dark"]) .listRow:not(.listHeader):hover,
+:global([data-theme="dark"]) .boardColumn,
+:global([data-theme="dark"]) .boardColumnDropTarget,
+:global([data-theme="dark"]) .sprintBoardColumn,
+:global([data-theme="dark"]) .empty,
+:global([data-theme="dark"]) .viewToggle .viewActive {
+  background: var(--color-surface);
+}
+
+:global([data-theme="dark"]) .workGroup,
+:global([data-theme="dark"]) .workRow,
+:global([data-theme="dark"]) .listHeader,
+:global([data-theme="dark"]) .boardColumn,
+:global([data-theme="dark"]) .boardColumnDropTarget,
+:global([data-theme="dark"]) .sprintBoardColumn {
+  border-color: var(--color-border);
+}

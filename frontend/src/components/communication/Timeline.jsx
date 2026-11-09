@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Pencil, Trash2, MoreHorizontal, Check, X } from 'lucide-react';
+import { Send, Pencil, Trash2, MoreHorizontal, Check, X, Paperclip, FileText, Download } from 'lucide-react';
 import Avatar from '../Avatar';
 import styles from './Timeline.module.css';
 
@@ -13,6 +13,12 @@ function formatEntryTime(value) {
     hour: 'numeric',
     minute: '2-digit',
   });
+}
+
+function formatFileSize(value) {
+  if (value < 1024) return `${value} B`;
+  if (value < 1024 * 1024) return `${(value / 1024).toFixed(0)} KB`;
+  return `${(value / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 /* ── Activity Entry ────────────────────────────────────────── */
@@ -33,7 +39,7 @@ function ActivityEntry({ item }) {
 }
 
 /* ── Comment Entry ─────────────────────────────────────────── */
-function CommentEntry({ comment, currentUserId, onDelete, onUpdate }) {
+function CommentEntry({ comment, currentUserId, onDelete, onUpdate, onDownloadAttachment }) {
   const [showMenu, setShowMenu] = useState(false);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(comment.content);
@@ -116,7 +122,28 @@ function CommentEntry({ comment, currentUserId, onDelete, onUpdate }) {
               <button type="submit" disabled={!draft.trim()}><Check size={13} /> Save</button>
             </div>
           </form>
-        ) : <div className={styles.commentContent}>{comment.content}</div>}
+        ) : (
+          <>
+            {comment.content && <div className={styles.commentContent}>{comment.content}</div>}
+            {!!comment.attachments?.length && (
+              <div className={styles.commentAttachments}>
+                {comment.attachments.map((attachment) => (
+                  <button
+                    type="button"
+                    key={attachment.id}
+                    className={styles.commentAttachment}
+                    onClick={() => onDownloadAttachment(attachment)}
+                    aria-label={`Download ${attachment.filename}`}
+                  >
+                    <FileText size={16} />
+                    <span><strong>{attachment.filename}</strong><small>{formatFileSize(attachment.file_size)}</small></span>
+                    <Download size={14} />
+                  </button>
+                ))}
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   );
@@ -126,15 +153,40 @@ function CommentEntry({ comment, currentUserId, onDelete, onUpdate }) {
 function CommentInput({ onSubmit, currentUser }) {
   const [value, setValue] = useState('');
   const [focused, setFocused] = useState(false);
+  const [files, setFiles] = useState([]);
+  const [error, setError] = useState('');
+  const [sending, setSending] = useState(false);
   const textareaRef = useRef(null);
+  const fileInputRef = useRef(null);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const trimmed = value.trim();
-    if (!trimmed) return;
-    onSubmit(trimmed);
+    if ((!trimmed && !files.length) || sending) return;
+    setSending(true);
+    setError('');
+    const saved = await onSubmit(trimmed, files);
+    setSending(false);
+    if (saved === false) return;
     setValue('');
+    setFiles([]);
     textareaRef.current?.blur();
+  };
+
+  const handleFiles = (event) => {
+    const incoming = Array.from(event.target.files ?? []);
+    event.target.value = '';
+    if (files.length + incoming.length > 10) {
+      setError('Attach up to 10 files per comment.');
+      return;
+    }
+    const tooLarge = incoming.find((file) => file.size > 20 * 1024 * 1024);
+    if (tooLarge) {
+      setError(`${tooLarge.name} is larger than 20 MB.`);
+      return;
+    }
+    setFiles((current) => [...current, ...incoming]);
+    setError('');
   };
 
   const handleKeyDown = (e) => {
@@ -147,6 +199,17 @@ function CommentInput({ onSubmit, currentUser }) {
     <form className={styles.inputForm} onSubmit={handleSubmit}>
       <Avatar user={currentUser || { first_name: 'Me' }} size={28} className={styles['avatar-sm']} />
       <div className={`${styles.inputWrap} ${focused ? styles.inputFocused : ''}`}>
+        {!!files.length && (
+          <div className={styles.fileQueue} aria-label="Files to attach">
+            {files.map((file, index) => (
+              <span className={styles.fileChip} key={`${file.name}-${file.lastModified}-${index}`}>
+                <FileText size={14} />
+                <span>{file.name}</span>
+                <button type="button" onClick={() => setFiles((current) => current.filter((_, fileIndex) => fileIndex !== index))} aria-label={`Remove ${file.name}`}><X size={13} /></button>
+              </span>
+            ))}
+          </div>
+        )}
         <textarea
           ref={textareaRef}
           className={styles.textarea}
@@ -158,26 +221,31 @@ function CommentInput({ onSubmit, currentUser }) {
           onKeyDown={handleKeyDown}
           rows={focused || value ? 3 : 1}
         />
-        {(focused || value) && (
-          <div className={styles.inputFooter}>
-            <span className={styles.inputHint}>⌘↵ to send</span>
-            <button
-              type="submit"
-              className={styles.sendBtn}
-              disabled={!value.trim()}
-            >
-              <Send size={13} />
-              Send
+        <div className={styles.inputFooter}>
+          <div className={styles.inputTools}>
+            <button type="button" className={styles.attachBtn} onClick={() => fileInputRef.current?.click()} aria-label="Attach files" title="Attach files">
+              <Paperclip size={15} />
             </button>
+            <input ref={fileInputRef} className={styles.fileInput} type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.txt,.csv,.doc,.docx,.xls,.xlsx,.zip" onChange={handleFiles} />
+            <span className={styles.inputHint}>Attach files · Ctrl/⌘ + Enter to send</span>
           </div>
-        )}
+          <button
+            type="submit"
+            className={styles.sendBtn}
+            disabled={(!value.trim() && !files.length) || sending}
+          >
+            <Send size={13} />
+            {sending ? 'Sending…' : 'Send'}
+          </button>
+        </div>
+        {error && <span className={styles.inputError} role="alert">{error}</span>}
       </div>
     </form>
   );
 }
 
 /* ── Timeline (main export) ────────────────────────────────── */
-export default function Timeline({ items, currentUserId, currentUser, onAddComment, onDeleteComment, onUpdateComment, embedded = false }) {
+export default function Timeline({ items, currentUserId, currentUser, onAddComment, onDeleteComment, onUpdateComment, onDownloadAttachment, embedded = false }) {
   return (
     <div className={`${styles.timeline} ${embedded ? styles.timelineEmbedded : ''}`}>
       {!embedded && (
@@ -200,6 +268,7 @@ export default function Timeline({ items, currentUserId, currentUser, onAddComme
               currentUserId={currentUserId}
               onDelete={onDeleteComment}
               onUpdate={onUpdateComment}
+              onDownloadAttachment={onDownloadAttachment}
             />
           ) : (
             <ActivityEntry key={`a-${item.id}`} activity={item} />
