@@ -143,6 +143,8 @@ export const projectsApi = {
   createDocument: (id, data) => apiClient.post(`/projects/${id}/documents/`, data),
   updateDocument: (id, documentId, data) => apiClient.patch(`/projects/${id}/documents/${documentId}/`, data),
   deleteDocument: (id, documentId) => apiClient.delete(`/projects/${id}/documents/${documentId}/`),
+  documentVersions: (id, documentId) => apiClient.get(`/projects/${id}/documents/${documentId}/versions/`),
+  pinDocument: (id, documentId) => apiClient.post(`/projects/${id}/documents/${documentId}/pin/`),
 };
 
 // ─── Tasks ────────────────────────────────────────────────────────
