@@ -101,12 +101,31 @@ class ProjectDocument(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    is_pinned = models.BooleanField(default=False)
 
     class Meta:
-        ordering = ['-updated_at']
+        ordering = ['-is_pinned', '-updated_at']
 
     def __str__(self):
         return f"{self.title} - {self.project.name}"
+
+
+class DocumentVersion(models.Model):
+    document = models.ForeignKey(ProjectDocument, on_delete=models.CASCADE, related_name='versions')
+    title = models.CharField(max_length=255)
+    content = models.TextField(blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+        related_name='document_versions',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    change_summary = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.document.title} v{self.id} - {self.created_at.strftime('%Y-%m-%d %H:%M')}"
 
 
 class Sprint(models.Model):

@@ -6,8 +6,8 @@ from rest_framework.exceptions import NotFound, PermissionDenied
 from django.db import models
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
-from .models import Project, ProjectDocument, ProjectMembership, ProjectMilestone, Sprint
-from .serializers import ProjectDocumentSerializer, ProjectMilestoneSerializer, ProjectSerializer, ProjectMembershipSerializer, SprintSerializer
+from .models import Project, ProjectDocument, ProjectMembership, ProjectMilestone, Sprint, DocumentVersion
+from .serializers import ProjectDocumentSerializer, DocumentVersionSerializer, ProjectMilestoneSerializer, ProjectSerializer, ProjectMembershipSerializer, SprintSerializer
 from organizations.models import Organization, OrganizationMembership
 from teams.models import TeamMembership
 from organizations.context import active_organization_ids, current_organization_id
@@ -317,6 +317,13 @@ class ProjectViewSet(viewsets.ModelViewSet):
             previous = {'title': document.title, 'content': document.content}
             document = serializer.save(updated_by=request.user)
             if any(previous[key] != getattr(document, key) for key in previous):
+                DocumentVersion.objects.create(
+                    document=document,
+                    title=previous['title'],
+                    content=previous['content'],
+                    created_by=request.user,
+                    change_summary=request.data.get('change_summary', ''),
+                )
                 Activity.objects.create(
                     project=project,
                     actor=request.user,
@@ -325,6 +332,27 @@ class ProjectViewSet(viewsets.ModelViewSet):
                 )
             return Response(ProjectDocumentSerializer(document).data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['get'], url_path=r'documents/(?P<document_id>\d+)/versions')
+    def document_versions(self, request, pk=None, document_id=None):
+        project = self.get_object()
+        document = ProjectDocument.objects.filter(project=project, id=document_id).first()
+        if document is None:
+            return Response({'detail': 'Document not found.'}, status=status.HTTP_404_NOT_FOUND)
+        versions = DocumentVersion.objects.filter(document=document).select_related('created_by')
+        return Response(DocumentVersionSerializer(versions, many=True).data)
+
+    @action(detail=True, methods=['post'], url_path=r'documents/(?P<document_id>\d+)/pin')
+    def pin_document(self, request, pk=None, document_id=None):
+        project = self.get_object()
+        document = ProjectDocument.objects.filter(project=project, id=document_id).first()
+        if document is None:
+            return Response({'detail': 'Document not found.'}, status=status.HTTP_404_NOT_FOUND)
+        if not self.has_document_permission(project):
+            return Response({'detail': 'Only project contributors or managers can pin documents.'}, status=status.HTTP_403_FORBIDDEN)
+        document.is_pinned = not document.is_pinned
+        document.save(update_fields=['is_pinned'])
+        return Response(ProjectDocumentSerializer(document).data)
 
     def has_document_permission(self, project):
         return self.has_milestone_permission(project)

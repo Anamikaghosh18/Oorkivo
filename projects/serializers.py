@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Project, ProjectDocument, ProjectMembership, ProjectMilestone, Sprint
+from .models import Project, ProjectDocument, ProjectMembership, ProjectMilestone, Sprint, DocumentVersion
 from organizations.models import OrganizationMembership
 from organizations.serializers import UserMinimalSerializer
 from users.models import User
@@ -85,9 +85,21 @@ class ProjectDocumentSerializer(serializers.ModelSerializer):
         model = ProjectDocument
         fields = [
             'id', 'project', 'title', 'content', 'created_by', 'updated_by',
-            'created_at', 'updated_at',
+            'created_at', 'updated_at', 'is_pinned',
         ]
         read_only_fields = ['id', 'project', 'created_by', 'updated_by', 'created_at', 'updated_at']
+
+
+class DocumentVersionSerializer(serializers.ModelSerializer):
+    created_by = UserMinimalSerializer(read_only=True)
+
+    class Meta:
+        model = DocumentVersion
+        fields = [
+            'id', 'document', 'title', 'content', 'created_by',
+            'created_at', 'change_summary',
+        ]
+        read_only_fields = ['id', 'document', 'created_by', 'created_at']
 
 
 class SprintSerializer(serializers.ModelSerializer):
