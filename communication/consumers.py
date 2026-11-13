@@ -2,7 +2,7 @@ from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
 from django.contrib.auth.models import AnonymousUser
 
-from communication.models import Message
+from communication.models import ChatMessage
 from communication.services import user_can_access_project
 from projects.models import Project
 
@@ -32,10 +32,10 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             return
 
         if content.get('type') == 'message':
-            message = await database_sync_to_async(Message.objects.create)(
+            message = await database_sync_to_async(ChatMessage.objects.create)(
                 conversation_id=self.conversation_id,
                 content=content.get('content', ''),
-                author=user,
+                sender=user,
             )
             await self.channel_layer.group_send(
                 self.group_name,
