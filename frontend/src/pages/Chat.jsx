@@ -16,6 +16,7 @@ import AppShell from '../components/layout/AppShell';
 import Avatar from '../components/Avatar';
 import { useAuth } from '../hooks/useAuth';
 import { communicationApi, organizationsApi, projectsApi, teamsApi } from '../services/api';
+import { connectChatWebSocket } from '../services/websocket';
 import styles from './Chat.module.css';
 
 const MAX_FILE_BYTES = 20 * 1024 * 1024;
@@ -98,6 +99,16 @@ function getErrorMessage(error, fallback) {
   return firstError || fallback;
 }
 
+function mergeMessages(current, incoming) {
+  const messagesById = new Map(
+    [...current, ...incoming].map((message) => [String(message.id), message]),
+  );
+  return [...messagesById.values()].sort((left, right) => (
+    new Date(left.created_at) - new Date(right.created_at)
+    || Number(left.id) - Number(right.id)
+  ));
+}
+
 export default function Chat() {
   const { user, org, loading: authLoading } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -135,6 +146,7 @@ export default function Chat() {
   const fileInputRef = useRef(null);
   const bottomRef = useRef(null);
   const stickToBottomRef = useRef(true);
+  const selectedIdRef = useRef(selectedId);
 
   const selectedConversation = conversations.find(
     (conversation) => String(conversation.id) === String(selectedId),
@@ -192,11 +204,65 @@ export default function Chat() {
       }
     };
     loadWorkspaceData();
-    const intervalId = window.setInterval(loadWorkspaceData, 15000);
     return () => {
       active = false;
-      window.clearInterval(intervalId);
     };
+  }, [org?.id]);
+
+  useEffect(() => {
+    selectedIdRef.current = selectedId;
+  }, [selectedId]);
+
+  useEffect(() => {
+    if (!org?.id) return undefined;
+    return connectWebSocket('/ws/chat/', (event) => {
+      if (event.type !== 'message' || !event.message) return;
+      const incoming = event.message;
+      setConversations((current) => current.map((conversation) => (
+        String(conversation.id) === String(incoming.conversation)
+          ? {
+            ...conversation,
+            last_message: {
+              ...incoming,
+              attachment_count: incoming.attachments?.length ?? 0,
+            },
+            updated_at: incoming.created_at,
+          }
+          : conversation
+      )).sort((left, right) => new Date(right.updated_at) - new Date(left.updated_at)));
+      if (String(incoming.conversation) === String(selectedIdRef.current)) {
+        setMessages((current) => mergeMessages(current, [incoming]));
+      }
+    }, {
+      onOpen: () => {
+        communicationApi.conversations().then(({ data }) => {
+          const refreshed = getRows(data);
+          setConversations((current) => {
+            const currentById = new Map(current.map((conversation) => [
+              String(conversation.id),
+              conversation,
+            ]));
+            return refreshed.map((conversation) => {
+              const latest = currentById.get(String(conversation.id));
+              return latest && new Date(latest.updated_at) > new Date(conversation.updated_at)
+                ? latest
+                : conversation;
+            }).sort((left, right) => new Date(right.updated_at) - new Date(left.updated_at));
+          });
+        }).catch((loadError) => {
+          setError(getErrorMessage(loadError, 'Could not refresh workspace messages.'));
+        });
+        const conversationId = selectedIdRef.current;
+        if (!conversationId) return;
+        communicationApi.messages(conversationId).then(({ data }) => {
+          if (String(conversationId) === String(selectedIdRef.current)) {
+            setMessages((current) => mergeMessages(current, getRows(data)));
+          }
+        }).catch((loadError) => {
+          setConversationError(getErrorMessage(loadError, 'Could not refresh this conversation.'));
+        });
+      },
+    });
   }, [org?.id]);
 
   useEffect(() => {
@@ -274,12 +340,13 @@ export default function Chat() {
       return undefined;
     }
     let active = true;
+    setMessages([]);
     setConversationError('');
     const loadMessages = async () => {
       try {
         const response = await communicationApi.messages(selectedId);
         if (active) {
-          setMessages(getRows(response.data));
+          setMessages((current) => mergeMessages(current, getRows(response.data)));
           setDownloadError('');
           setConversationError('');
         }
@@ -291,10 +358,17 @@ export default function Chat() {
     };
     setLoadingMessages(true);
     loadMessages();
-    const intervalId = window.setInterval(loadMessages, 7000);
+
+    const disconnect = connectChatWebSocket(selectedId, (data) => {
+      if (active && data.message) {
+        setMessages((prev) => mergeMessages(prev, [data.message]));
+        stickToBottomRef.current = true;
+      }
+    });
+
     return () => {
       active = false;
-      window.clearInterval(intervalId);
+      disconnect();
     };
   }, [selectedId]);
 
@@ -395,7 +469,7 @@ export default function Chat() {
     setComposerError('');
     try {
       const response = await communicationApi.sendMessage(selectedId, payload);
-      setMessages((current) => [...current, response.data]);
+      setMessages((current) => mergeMessages(current, [response.data]));
       setConversations((current) => current.map((conversation) => (
         String(conversation.id) === String(selectedId)
           ? {

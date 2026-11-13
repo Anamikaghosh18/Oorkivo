@@ -42,9 +42,11 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+    'daphne',
     'django.contrib.staticfiles',
     'rest_framework', 
     'corsheaders',
+    'channels',
     'organizations', 
     'users', 
     'teams',
@@ -65,6 +67,23 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+ASGI_APPLICATION = 'backend.asgi.application'
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': (
+            'channels_redis.core.RedisChannelLayer'
+            if env('REDIS_URL', default='')
+            else 'channels.layers.InMemoryChannelLayer'
+        ),
+    },
+}
+
+if env('REDIS_URL', default=''):
+    CHANNEL_LAYERS['default']['CONFIG'] = {
+        'hosts': [env('REDIS_URL')],
+    }
 
 ROOT_URLCONF = 'backend.urls'
 
